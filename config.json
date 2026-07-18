@@ -1,0 +1,12 @@
+{
+  "proxy": "http://127.0.0.1:7890",
+  "host": "127.0.0.1",
+  "port": 8777,
+  "open_browser": true,
+  "update_seconds": 15,
+  "catalog_refresh_seconds": 1800,
+  "default_interval": "15m",
+  "default_range": "30d",
+  "default_watch_refresh_seconds": 15,
+  "max_pattern_bars": 5000
+}

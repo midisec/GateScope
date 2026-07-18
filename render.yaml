@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: gate-chart-pattern-scanner
+    runtime: docker
+    plan: starter
+    healthCheckPath: /api/status
+    envVars:
+      - key: HOST
+        value: 0.0.0.0
+      - key: PORT
+        value: 8777
+      - key: NO_BROWSER
+        value: 1
+    disk:
+      name: scanner-data
+      mountPath: /app/data
+      sizeGB: 1

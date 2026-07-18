@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+  <title>Gate 图表形态扫描器 · 多周期机会扫描</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">G</div>
+      <div>
+        <h1>Gate 图表形态扫描器</h1>
+        <p>现货 · 股票代币候选 · 永续合约 · 历史方向一致率 · 波浪理论 · 多形态告警</p>
+      </div>
+    </div>
+    <nav class="top-tabs">
+      <button class="top-tab active" data-view="market-view">行情图表</button>
+      <button class="top-tab" data-view="opportunities-view">机会扫描</button>
+      <button class="top-tab" data-view="alerts-view">告警中心 <span id="unread-badge" class="badge hidden">0</span></button>
+    </nav>
+    <div class="status-area">
+      <span id="scanner-dot" class="status-dot"></span>
+      <span id="scanner-text">正在连接</span>
+      <button id="refresh-current" class="icon-button" title="刷新当前行情">↻</button>
+    </div>
+  </header>
+
+  <main id="market-view" class="view active">
+    <aside class="sidebar">
+      <div class="sidebar-tabs">
+        <button class="sidebar-tab active" data-side="search-panel">市场搜索</button>
+        <button class="sidebar-tab" data-side="watchlist-panel">我的自选 <span id="watch-count" class="small-count">0</span></button>
+      </div>
+
+      <section id="search-panel" class="side-panel active">
+        <div class="search-row">
+          <input id="instrument-search" type="search" placeholder="搜索 BTC、SKHY、NVDA…" autocomplete="off">
+          <button id="catalog-refresh" title="从 Gate 刷新交易标的">刷新</button>
+        </div>
+        <div id="market-filters" class="filter-chips">
+          <button class="active" data-market="all">全部</button>
+          <button data-market="spot">现货</button>
+          <button data-market="stock">股票候选</button>
+          <button data-market="futures:usdt">USDT合约</button>
+          <button data-market="futures:btc">BTC合约</button>
+        </div>
+        <div class="catalog-note">股票分类依据 Gate 元数据及代码特征自动识别，可能需要人工复核。</div>
+        <div id="instrument-results" class="instrument-list"></div>
+      </section>
+
+      <section id="watchlist-panel" class="side-panel">
+        <div class="watch-toolbar">
+          <span>后台会按设置周期增量写入 SQLite</span>
+          <button id="wake-scanner">立即更新</button>
+        </div>
+        <div id="watchlist" class="instrument-list"></div>
+      </section>
+    </aside>
+
+    <section class="workspace">
+      <div class="symbol-header">
+        <div>
+          <div class="symbol-line">
+            <strong id="current-symbol">请选择交易标的</strong>
+            <span id="current-market" class="market-pill">--</span>
+            <span id="stock-pill" class="market-pill stock hidden">股票候选</span>
+          </div>
+          <div id="current-name" class="subtle">从左侧搜索或自选中选择</div>
+        </div>
+        <div class="quote-box">
+          <strong id="last-price">--</strong>
+          <span id="last-time">--</span>
+        </div>
+      </div>
+
+      <div class="chart-toolbar">
+        <div id="interval-buttons" class="button-group"></div>
+        <div id="range-buttons" class="button-group range-group"></div>
+        <div class="toolbar-spacer"></div>
+        <button id="pattern-button" class="primary">图表形态 <span id="selected-pattern-count">0</span></button>
+        <button id="scan-button">重新识别</button>
+        <button id="reset-chart">复位</button>
+        <button id="export-csv">导出CSV</button>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-legend">
+          <span id="ohlc-legend">O -- H -- L -- C --</span>
+          <span id="pattern-summary">尚未识别形态</span>
+        </div>
+        <div id="chart-container" class="chart-container">
+          <div id="main-chart" class="chart-host"></div>
+          <svg id="pattern-overlay" class="pattern-overlay" aria-hidden="true"></svg>
+          <div id="chart-empty" class="chart-empty">请选择交易标的</div>
+          <div id="chart-loading" class="chart-loading hidden"><div class="spinner"></div><span>正在更新行情…</span></div>
+        </div>
+        <div class="chart-footer">
+          <span id="data-status">本地数据库：等待加载</span>
+          <span>滚轮缩放 · 拖动平移 · 双击复位 · 图表由 TradingView Lightweight Charts™ 驱动</span>
+        </div>
+      </div>
+
+      <div class="pattern-results-card">
+        <div class="section-title">
+          <div>
+            <h2>识别结果</h2>
+            <p>仅包含图表形态与波浪理论，不包含十字星、锤形等K线形态。</p>
+          </div>
+          <div class="inline-controls">
+            <label>最低置信度 <span id="confidence-value">55%</span></label>
+            <input id="confidence-slider" type="range" min="40" max="95" value="55" step="1">
+            <label class="switch-label"><input id="confirmed-only" type="checkbox"><span>仅已确认</span></label>
+          </div>
+        </div>
+        <div id="pattern-results" class="pattern-results empty-state">选择形态后点击“重新识别”。</div>
+      </div>
+
+      <div class="pattern-stats-card">
+        <div class="section-title">
+          <div>
+            <h2>历史表现统计</h2>
+            <p>不是简单统计看涨/看跌数量，而是回测形态结束后未来N根K线是否按预期方向运行。</p>
+          </div>
+          <div id="performance-horizon-buttons" class="button-group performance-horizons">
+            <button type="button" data-horizon="5">5根</button>
+            <button type="button" data-horizon="10">10根</button>
+            <button type="button" data-horizon="20" class="active">20根</button>
+            <button type="button" data-horizon="50">50根</button>
+          </div>
+        </div>
+        <div id="performance-content" class="performance-content empty-state">完成形态识别后显示历史方向一致率。</div>
+      </div>
+    </section>
+  </main>
+
+  <main id="opportunities-view" class="view">
+    <section class="opportunity-layout">
+      <aside class="opportunity-settings-card">
+        <div class="section-title compact-title">
+          <div><h2>多标的自动回测</h2><p>遍历所选自选标的、周期和全部图表形态。</p></div>
+        </div>
+
+        <div class="opportunity-form-section">
+          <div class="form-section-head"><strong>扫描自选</strong><span id="op-watch-selected">0个</span></div>
+          <div id="op-watchlist-options" class="op-check-grid"></div>
+          <div class="mini-actions"><button id="op-watch-all" type="button">全选</button><button id="op-watch-clear" type="button">清空</button></div>
+        </div>
+
+        <div class="opportunity-form-section">
+          <div class="form-section-head"><strong>时间周期</strong><span>可多选</span></div>
+          <div id="op-interval-options" class="op-chip-grid"></div>
+        </div>
+
+        <div class="opportunity-form-section">
+          <div class="form-section-head"><strong>图表形态</strong><span id="op-pattern-selected">全部</span></div>
+          <div id="op-pattern-options" class="op-pattern-list"></div>
+          <div class="mini-actions"><button id="op-pattern-all" type="button">全选形态</button><button id="op-pattern-clear" type="button">清空</button></div>
+        </div>
+
+        <div class="opportunity-form-section op-threshold-grid">
+          <label>最低算法可信度<input id="op-min-confidence" type="range" min="40" max="95" value="60"><span id="op-min-confidence-value">60%</span></label>
+          <label>最低历史胜率<input id="op-min-win-rate" type="range" min="45" max="90" value="55"><span id="op-min-win-rate-value">55%</span></label>
+          <label>最低历史样本<input id="op-min-samples" type="number" min="1" max="500" value="12"></label>
+          <label>信号有效K线数<input id="op-active-bars" type="number" min="1" max="100" value="5"></label>
+          <label>回测历史根数<select id="op-max-bars"><option value="1500">1500根</option><option value="3000">3000根</option><option value="5000" selected>5000根</option><option value="8000">8000根</option><option value="9380">9380根</option></select></label>
+          <label>回测持有周期<select id="op-horizons" multiple><option value="5" selected>5根</option><option value="10" selected>10根</option><option value="20" selected>20根</option><option value="50" selected>50根</option></select></label>
+        </div>
+
+        <div class="opportunity-form-section">
+          <label class="switch-label"><input id="op-confirmed-only" type="checkbox"><span>只将突破确认形态列为可做</span></label>
+          <div class="auto-row">
+            <label class="switch-label"><input id="op-auto-enabled" type="checkbox"><span>后台自动重新扫描</span></label>
+            <select id="op-auto-seconds"><option value="300">每5分钟</option><option value="900" selected>每15分钟</option><option value="1800">每30分钟</option><option value="3600">每1小时</option></select>
+          </div>
+        </div>
+
+        <div class="opportunity-actions">
+          <button id="op-save-settings" type="button">保存设置</button>
+          <button id="op-run" type="button" class="primary">开始遍历回测</button>
+        </div>
+      </aside>
+
+      <section class="opportunity-results-area">
+        <div class="op-run-card">
+          <div>
+            <strong id="op-run-title">尚未执行扫描</strong>
+            <p id="op-run-detail">选择自选和周期后，点击“开始遍历回测”。</p>
+          </div>
+          <div class="op-progress-wrap"><div class="op-progress-track"><span id="op-progress-bar"></span></div><span id="op-progress-text">0/0</span></div>
+        </div>
+
+        <div id="op-summary-grid" class="op-summary-grid">
+          <article><span>扫描组合</span><strong>0</strong></article>
+          <article class="positive"><span>可做信号</span><strong>0</strong></article>
+          <article class="positive"><span>看涨机会</span><strong>0</strong></article>
+          <article class="negative"><span>看跌机会</span><strong>0</strong></article>
+          <article><span>无当前信号</span><strong>0</strong></article>
+        </div>
+
+        <div class="op-results-card">
+          <div class="section-title">
+            <div><h2>当前机会清单</h2><p>历史胜率按同一标的、同一周期、同一形态的历史方向一致率计算。</p></div>
+            <div class="op-filter-row">
+              <select id="op-status-filter"><option value="all">全部状态</option><option value="actionable">只看可做</option><option value="watch">观察信号</option><option value="no_signal">无信号</option><option value="error">异常</option></select>
+              <select id="op-direction-filter"><option value="all">全部方向</option><option value="bullish">看涨</option><option value="bearish">看跌</option></select>
+              <select id="op-sort"><option value="score">综合分排序</option><option value="win_rate">历史胜率排序</option><option value="confidence">可信度排序</option><option value="symbol">标的排序</option></select>
+              <button id="op-refresh-results" type="button">刷新结果</button>
+            </div>
+          </div>
+          <div class="op-table-scroll">
+            <table class="opportunity-table">
+              <thead><tr><th>标的</th><th>周期</th><th>当前判断</th><th>方向/形态</th><th>算法可信度</th><th>历史胜率</th><th>样本</th><th>推荐持有</th><th>形态历时</th><th>信号年龄</th><th>综合分</th><th>操作</th></tr></thead>
+              <tbody id="op-results-body"><tr><td colspan="12" class="empty-cell">暂无扫描结果</td></tr></tbody>
+            </table>
+          </div>
+          <div class="methodology-note">“可做”仅代表当前形态仍在有效窗口内，且算法可信度、历史样本和历史方向一致率达到你设置的阈值。系统会从5/10/20/50根中选择历史证据更稳健的持有周期；这仍是样本内启发式回测，不等同于未来盈利概率。</div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <main id="alerts-view" class="view">
+    <section class="alerts-layout">
+      <div class="rules-card">
+        <div class="section-title">
+          <div><h2>形态告警规则</h2><p>支持“任一满足”或“全部满足”，后台扫描自选行情。</p></div>
+          <button id="new-alert" class="primary">新建告警</button>
+        </div>
+        <div id="alert-rules" class="rule-list"></div>
+      </div>
+      <div class="events-card">
+        <div class="section-title">
+          <div><h2>告警记录</h2><p>浏览器通知仅在用户授权后生效。</p></div>
+          <button id="mark-all-read">全部已读</button>
+        </div>
+        <div id="alert-events" class="event-list"></div>
+      </div>
+    </section>
+  </main>
+
+  <div id="pattern-drawer" class="drawer hidden">
+    <div class="drawer-backdrop" data-close-drawer></div>
+    <section class="drawer-panel">
+      <div class="drawer-header">
+        <div><h2>选择图表形态</h2><p>可以单选、多选或全选，识别结果会绘制在K线上。</p></div>
+        <button class="drawer-close" data-close-drawer>×</button>
+      </div>
+      <div class="drawer-tools">
+        <input id="pattern-search" type="search" placeholder="搜索双顶、旗形、楔形…">
+        <button id="select-all-patterns">全选</button>
+        <button id="clear-patterns">清空</button>
+      </div>
+      <div id="pattern-options" class="pattern-options"></div>
+      <div class="drawer-footer">
+        <span id="drawer-selected-text">已选择 0 个</span>
+        <button id="apply-patterns" class="primary">应用并识别</button>
+      </div>
+    </section>
+  </div>
+
+  <div id="alert-modal" class="modal hidden">
+    <div class="modal-backdrop" data-close-alert></div>
+    <section class="modal-card">
+      <div class="drawer-header">
+        <div><h2>新建形态告警</h2><p id="alert-instrument-label">请选择自选标的</p></div>
+        <button class="drawer-close" data-close-alert>×</button>
+      </div>
+      <form id="alert-form">
+        <label>规则名称<input id="alert-name" required maxlength="100" placeholder="例如：BTC 15分钟反转形态"></label>
+        <div class="form-grid">
+          <label>自选标的<select id="alert-instrument" required></select></label>
+          <label>识别周期<select id="alert-interval"></select></label>
+          <label>组合逻辑<select id="alert-mode"><option value="any">任一形态满足</option><option value="all">所有选中形态同时满足</option></select></label>
+          <label>冷却时间<select id="alert-cooldown"><option value="300">5分钟</option><option value="900">15分钟</option><option value="1800" selected>30分钟</option><option value="3600">1小时</option><option value="14400">4小时</option><option value="86400">1天</option></select></label>
+        </div>
+        <label>最低置信度 <span id="alert-confidence-value">65%</span><input id="alert-confidence" type="range" min="40" max="95" value="65"></label>
+        <div class="check-row">
+          <label><input id="alert-confirmed" type="checkbox">仅在突破确认后告警</label>
+          <label><input id="alert-browser" type="checkbox" checked>浏览器通知</label>
+          <label><input id="alert-sound" type="checkbox" checked>提示音</label>
+        </div>
+        <div class="alert-pattern-title">告警形态</div>
+        <div id="alert-pattern-options" class="compact-pattern-grid"></div>
+        <div class="modal-actions">
+          <button type="button" data-close-alert>取消</button>
+          <button type="submit" class="primary">保存告警</button>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="/static/vendor/lightweight-charts.standalone.production.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+name: CI
+on:
+  push:
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r requirements.txt
+      - run: python -m py_compile app.py database.py gate_client.py pattern_engine.py scanner.py
+      - run: |
+          python - <<'PY'
+          import math
+          from pattern_engine import scan_patterns
+          rows=[]
+          for i in range(180):
+              c = 100 + math.sin(i / 10) * 5
+              rows.append({'ts': 1700000000+i*900, 'open':c-.1, 'high':c+.3, 'low':c-.3, 'close':c, 'volume':1000})
+          result=scan_patterns(rows, ['double_top','double_bottom'], min_confidence=.3)
+          assert 'events' in result
+          PY
