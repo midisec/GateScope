@@ -1,6 +1,8 @@
 """Shared-capital portfolio jobs over owner-scoped immutable structure studies."""
 from __future__ import annotations
 
+import builtins
+
 import heapq
 import time
 from datetime import datetime
@@ -9,6 +11,7 @@ from uuid import UUID,uuid4
 
 from psycopg.types.json import Jsonb
 
+from gatescope.adapters.postgres import required_row
 from gatescope.adapters.postgres import PostgresPool
 from gatescope.domain.market import TIMEFRAME_SECONDS
 from gatescope.observability import event
@@ -30,7 +33,7 @@ class PortfolioResearchRepository:
         report="report_json" if include_report else "NULL"
         return f"SELECT id,source_run_ids,policy_json,state,created_at,completed_at,safe_error,progress_json,{report},from_time,to_time,source_manifest FROM research_portfolios"
 
-    def create(self,tenant: UUID,user: UUID,sources: list[UUID],policy: PortfolioPolicy,
+    def create(self,tenant: UUID,user: UUID,sources: builtins.list[UUID],policy: PortfolioPolicy,
                start: datetime|None=None,end: datetime|None=None) -> dict[str,Any]:
         if not 1<=len(sources)<=8 or len(set(sources))!=len(sources):
             raise ValueError("请选择 1–8 个不重复的已完成形态研究")
@@ -64,12 +67,12 @@ class PortfolioResearchRepository:
             right=min(right,end) if end else right
             if left>=right:
                 raise ValueError("来源历史没有共同覆盖区间，请调整研究或日期")
-            case_count=conn.execute("SELECT count(*) FROM (SELECT 1 FROM research_structure_cases WHERE run_id=ANY(%s) LIMIT %s) bounded",
-                (sources,MAX_CASES+1)).fetchone()[0]
+            case_count=required_row(conn.execute("SELECT count(*) FROM (SELECT 1 FROM research_structure_cases WHERE run_id=ANY(%s) LIMIT %s) bounded",
+                (sources,MAX_CASES+1)).fetchone())[0]
             if case_count>MAX_CASES:
                 raise ValueError("来源案例超过 20000 条，请选择更短的来源研究或减少来源")
-            input_count=conn.execute("SELECT count(*) FROM (SELECT 1 FROM research_structure_inputs WHERE run_id=ANY(%s) AND open_time>=%s AND open_time<%s LIMIT %s) bounded",
-                (sources,int(left.timestamp()),int(right.timestamp()),MAX_INPUTS+1)).fetchone()[0]
+            input_count=required_row(conn.execute("SELECT count(*) FROM (SELECT 1 FROM research_structure_inputs WHERE run_id=ANY(%s) AND open_time>=%s AND open_time<%s LIMIT %s) bounded",
+                (sources,int(left.timestamp()),int(right.timestamp()),MAX_INPUTS+1)).fetchone())[0]
             if input_count>MAX_INPUTS:
                 raise ValueError("组合行情超过 1000000 根预算，请缩短区间或减少来源")
             conn.execute("""INSERT INTO research_portfolios(id,tenant_id,owner_user_id,source_run_ids,policy_json,
@@ -86,12 +89,12 @@ class PortfolioResearchRepository:
 
     def list(self,tenant: UUID,user: UUID,*,limit: int=20,offset: int=0) -> dict[str,Any]:
         with self.pool.transaction(tenant,user) as conn:
-            count=conn.execute("SELECT count(*) FROM research_portfolios").fetchone()[0]
+            count=required_row(conn.execute("SELECT count(*) FROM research_portfolios").fetchone())[0]
             rows=conn.execute(self._select(include_report=False)+" ORDER BY created_at DESC,id DESC LIMIT %s OFFSET %s",(limit+1,offset)).fetchall()
         return {"items":[{**self._row(row),"report":None} for row in rows[:limit]],"total":count,
             "has_more":len(rows)>limit,"next_offset":offset+limit if len(rows)>limit else None}
 
-    def _cases(self,tenant: UUID,user: UUID,manifest: list[dict]) -> list[dict]:
+    def _cases(self,tenant: UUID,user: UUID,manifest: builtins.list[dict]) -> builtins.list[dict]:
         result=[]
         prefix_inputs=0
         for source in manifest:
@@ -148,9 +151,9 @@ class PortfolioResearchRepository:
                     # At most one bounded prefix aggregation per source. An old
                     # late-arriving candle can delay the complete source prefix,
                     # so looking up just the final bar is not sufficient.
-                    count=conn.execute("""SELECT count(*) FROM (SELECT 1 FROM research_structure_inputs
+                    count=required_row(conn.execute("""SELECT count(*) FROM (SELECT 1 FROM research_structure_inputs
                         WHERE run_id=%s AND open_time<=%s LIMIT %s) bounded""",
-                        (source["run_id"],needed[-1],MAX_INPUTS-prefix_inputs+1)).fetchone()[0]
+                        (source["run_id"],needed[-1],MAX_INPUTS-prefix_inputs+1)).fetchone())[0]
                     prefix_inputs+=count
                     if prefix_inputs>MAX_INPUTS:
                         raise ValueError("组合行情超过 1000000 根预算，请缩短区间或减少来源")

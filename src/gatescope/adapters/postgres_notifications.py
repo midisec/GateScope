@@ -552,6 +552,8 @@ class PostgresNotificationRepository:
                 count(*) FILTER (WHERE nd.status IN ('PENDING','RETRY','FAILED','DEAD_LETTER'))
                 FROM notification_deliveries nd JOIN notification_channels nc ON nc.id=nd.channel_id
                 WHERE nc.owner_user_id=%s""", (status, status, user_id)).fetchone()
+        if row is None:
+            raise RuntimeError("NOTIFICATION_COUNTS_MISSING")
         return int(row[0]), int(row[1])
 
     @staticmethod

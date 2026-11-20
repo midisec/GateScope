@@ -213,10 +213,10 @@ def normalize_series(
             continue
         if metric_id in {"oi", "funding"} and all(key in row for key in ("open", "high", "low")):
             ohlc = [_number(row[key]) for key in ("open", "high", "low", "close")]
-            if any(number is None for number in ohlc):
+            opening, high, low, closing = ohlc
+            if opening is None or high is None or low is None or closing is None:
                 flags.add("INVALID_OHLC_EXCLUDED")
                 continue
-            opening, high, low, closing = ohlc
             if high < max(opening, low, closing) or low > min(opening, high, closing) or (metric_id == "oi" and low < 0):
                 flags.add("INVALID_OHLC_EXCLUDED")
                 continue
@@ -272,10 +272,10 @@ def _edge_price(edge: Any, timestamp: int) -> float | None:
 
 
 def _conditions(event: Mapping[str, Any], timestamp: int) -> dict[str, Any]:
-    levels = event.get("levels") if isinstance(event.get("levels"), Mapping) else {}
+    levels = event["levels"] if isinstance(event.get("levels"), Mapping) else {}
     buffer = _number(levels.get("buffer"))
     buffer = buffer if buffer is not None and buffer >= 0 else None
-    direction = {"bullish": 1, "bearish": -1}.get(event.get("signal_direction"), 0)
+    direction = {"bullish": 1, "bearish": -1}.get(event.get("signal_direction", ""), 0)
     if not direction and event.get("pattern") in {"double_top", "double_bottom"}:
         direction = -1 if event["pattern"] == "double_top" else 1
     boundaries = [(direction, "trigger")] if direction and "trigger" in levels else [
@@ -286,27 +286,27 @@ def _conditions(event: Mapping[str, Any], timestamp: int) -> dict[str, Any]:
         if projected is not None and buffer is not None and projected + side * buffer > 0:
             confirmation.append({"side": side, "price": projected + side * buffer,
                                  "projected_at": timestamp, "comparison": "CLOSE_ABOVE" if side > 0 else "CLOSE_BELOW"})
-    side = _number(levels.get("invalid_side"))
+    invalid_side = _number(levels.get("invalid_side"))
     base = _edge_price(levels.get("invalid_edge"), timestamp) if "invalid_edge" in levels else _number(levels.get("invalid_price"))
     used_buffer = 0.0 if levels.get("hard") is True else buffer
     invalidation = None
-    if side in {-1, 1} and base is not None and base > 0 and used_buffer is not None:
-        price = base + side * used_buffer
+    if invalid_side is not None and invalid_side in {-1, 1} and base is not None and base > 0 and used_buffer is not None:
+        price = base + invalid_side * used_buffer
         if math.isfinite(price) and price > 0:
-            invalidation = {"price": price, "side": int(side), "projected_at": timestamp,
+            invalidation = {"price": price, "side": int(invalid_side), "projected_at": timestamp,
                             "mode": "WICK_INVALIDATION" if levels.get("hard") is True else "CLOSE_INVALIDATION"}
     return {"confirmation": confirmation, "confirmation_closes": levels.get("closes"),
             "invalidation": invalidation, "projected_at": timestamp}
 
 
 def _scenario(scenario: Mapping[str, Any], event: Mapping[str, Any], conditions: dict[str, Any], assessed_at: int) -> dict[str, Any]:
-    forecast = event.get("forecast") if isinstance(event.get("forecast"), Mapping) else {}
+    forecast = event["forecast"] if isinstance(event.get("forecast"), Mapping) else {}
     if event.get("phase") not in {"FORMING", "FORMED", "CONFIRMED"}:
         raise ValueError("terminal structures cannot create active scenarios")
     entry = _number(scenario.get("entry"))
     lower = _number(scenario.get("target_lower"))
     upper = _number(scenario.get("target_upper"))
-    if any(value is None or value <= 0 for value in (entry, lower, upper)) or lower > upper:
+    if entry is None or lower is None or upper is None or min(entry, lower, upper) <= 0 or lower > upper:
         raise ValueError("scenario prices must be finite, positive and ordered")
     next_pivot = event.get("phase") == "FORMING" or forecast.get("kind") == "NEXT_PIVOT"
     result: dict[str, Any] = {"kind": "NEXT_PIVOT_OBSERVATION" if next_pivot else "CONDITIONAL_MOVE_SCENARIO",
@@ -318,7 +318,7 @@ def _scenario(scenario: Mapping[str, Any], event: Mapping[str, Any], conditions:
         return result
     if forecast.get("kind") != "CONDITIONAL_MOVE":
         raise ValueError("structure has no conditional price forecast")
-    direction_name = event.get("signal_direction")
+    direction_name = event.get("signal_direction", "")
     direction = {"bullish": 1, "bearish": -1}.get(direction_name, 0)
     if not direction or scenario.get("direction", direction_name) != direction_name:
         raise ValueError("scenario direction must match the conditional structure")
@@ -351,10 +351,10 @@ def build_review(
         raise ValueError("invalid assessment decision time")
     event = copy.deepcopy(dict(event))
     bundle = copy.deepcopy(dict(bundle))
-    forecast = event.get("forecast") if isinstance(event.get("forecast"), Mapping) else {}
+    forecast = event["forecast"] if isinstance(event.get("forecast"), Mapping) else {}
     conditions = _conditions(event, decision_bar_time)
     reasons: list[str] = []
-    match = bundle.get("match") if isinstance(bundle.get("match"), Mapping) else {}
+    match = bundle["match"] if isinstance(bundle.get("match"), Mapping) else {}
     if match.get("status") != "EXACT":
         reasons.append("CONTRACT_NOT_EXACT")
     for dimension in ("instrument_id", "timeframe"):
@@ -397,7 +397,7 @@ def build_review(
         if (series.get("unit") != expected[1] or series.get("unit_status") != "VERIFIED"
                 or series.get("population") != expected[3]):
             continue
-        rows = series.get("points") if isinstance(series.get("points"), list) else []
+        rows = series["points"] if isinstance(series.get("points"), list) else []
         # decision_bar_time is the latest finalized candle's OPEN timestamp;
         # no use of a provider period closing beyond that candle's close.
         step = TIMEFRAME_SECONDS.get(str(bundle.get("timeframe")), 0)
@@ -439,7 +439,7 @@ def build_review(
         "assessed_at": assessed_at, "decision_bar_time": decision_bar_time,
         "basis": "CURRENT_REASSESSMENT_NOT_ORIGINAL_EVIDENCE", "state": "UNAVAILABLE" if reasons else "READY",
         "reason_codes": reasons, "scope": bundle.get("scope"), "match": match,
-        "original": {"phase": event.get("phase"), "signal_direction": event.get("signal_direction"),
+        "original": {"phase": event.get("phase"), "signal_direction": event.get("signal_direction", ""),
                      "confidence": event.get("confidence"), "forecast": forecast,
                      "initial_forecast": event.get("initial_forecast"), "recognition": event.get("recognition"),
                      "historical_reference": event.get("historical_reference")},

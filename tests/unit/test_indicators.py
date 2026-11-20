@@ -15,7 +15,9 @@ from gatescope.indicators import (
 )
 
 
-def bars(closes: list[float], *, highs: list[float] | None = None, lows: list[float] | None = None) -> list[Bar]:
+def bars(
+    closes: list[float], *, highs: list[float] | None = None, lows: list[float] | None = None
+) -> list[Bar]:
     start = datetime(2026, 1, 1, tzinfo=timezone.utc)
     result = []
     for index, close in enumerate(closes):
@@ -24,17 +26,28 @@ def bars(closes: list[float], *, highs: list[float] | None = None, lows: list[fl
         low = lows[index] if lows else close - 1
         result.append(
             Bar(
-                venue="GATE", market="FUTURES", instrument_id="btc", timeframe="1m",
-                open_time=opened, close_time=opened + timedelta(minutes=1),
-                open=Decimal(str(close)), high=Decimal(str(high)), low=Decimal(str(low)),
-                close=Decimal(str(close)), volume=Decimal(str((index + 1) * 10)),
-                is_final=True, revision=1, available_at=opened + timedelta(minutes=1),
+                venue="GATE",
+                market="FUTURES",
+                instrument_id="btc",
+                timeframe="1m",
+                open_time=opened,
+                close_time=opened + timedelta(minutes=1),
+                open=Decimal(str(close)),
+                high=Decimal(str(high)),
+                low=Decimal(str(low)),
+                close=Decimal(str(close)),
+                volume=Decimal(str((index + 1) * 10)),
+                is_final=True,
+                revision=1,
+                available_at=opened + timedelta(minutes=1),
             )
         )
     return result
 
 
-def values_for(indicator_id: str, data: list[Bar], params: dict[str, int | float]) -> list[dict[str, float | None]]:
+def values_for(
+    indicator_id: str, data: list[Bar], params: dict[str, int | float]
+) -> list[dict[str, float | None]]:
     node = IndicatorNode("test", indicator_id, params)
     points = compute_batch(default_registry(), [node], data)
     return [dict(point.values) for point in points]
@@ -84,22 +97,26 @@ def test_adx_reference_for_monotonic_trend() -> None:
 
 def test_bollinger_variance_retains_small_volatility_at_large_prices():
     import math
-    values = [1e9 + .01*(i%5) for i in range(120)]
-    result = values_for("boll", bars(values), {"period":20,"deviations":2.0})
-    for i in range(19,len(values)):
-        sample=values[i-19:i+1]
-        origin=sample[0]; centered=[v-origin for v in sample]
-        mean=math.fsum(centered)/20
-        std=math.sqrt(math.fsum((v-mean)**2 for v in centered)/20)
-        assert result[i]["upper"]-result[i]["lower"]==pytest.approx(4*std,rel=1e-4)
+
+    values = [1e9 + 0.01 * (i % 5) for i in range(120)]
+    result = values_for("boll", bars(values), {"period": 20, "deviations": 2.0})
+    for i in range(19, len(values)):
+        sample = values[i - 19 : i + 1]
+        origin = sample[0]
+        centered = [v - origin for v in sample]
+        mean = math.fsum(centered) / 20
+        std = math.sqrt(math.fsum((v - mean) ** 2 for v in centered) / 20)
+        assert result[i]["upper"] - result[i]["lower"] == pytest.approx(4 * std, rel=1e-4)
 
 
 def test_cached_indicators_do_not_bypass_earlier_watermark():
-    data=bars([10,11,12]); cache=IndicatorBatchCache()
-    registry=default_registry(); nodes=[IndicatorNode("e","ema",{"period":2})]
-    compute_batch(registry,nodes,data,cache=cache)
-    with pytest.raises(ValueError,match="not available"):
-        compute_batch(registry,nodes,data,cache=cache,watermark=data[0].available_at)
+    data = bars([10, 11, 12])
+    cache = IndicatorBatchCache()
+    registry = default_registry()
+    nodes = [IndicatorNode("e", "ema", {"period": 2})]
+    compute_batch(registry, nodes, data, cache=cache)
+    with pytest.raises(ValueError, match="not available"):
+        compute_batch(registry, nodes, data, cache=cache, watermark=data[0].available_at)
 
 
 def test_batch_and_stream_are_identical_and_cache_is_versioned() -> None:
@@ -128,10 +145,12 @@ def test_registry_rejects_bad_parameters_missing_dependencies_and_cycles() -> No
     with pytest.raises(ValueError, match="missing"):
         registry.plan([IndicatorNode("bad", "sma", {}, depends_on=("absent",))])
     with pytest.raises(ValueError, match="cycle"):
-        registry.plan([
-            IndicatorNode("a", "sma", {}, depends_on=("b",)),
-            IndicatorNode("b", "ema", {}, depends_on=("a",)),
-        ])
+        registry.plan(
+            [
+                IndicatorNode("a", "sma", {}, depends_on=("b",)),
+                IndicatorNode("b", "ema", {}, depends_on=("a",)),
+            ]
+        )
     with pytest.raises(ValueError, match="smaller"):
         IndicatorStream(
             registry,
@@ -146,10 +165,20 @@ def test_stream_rejects_unavailable_nonfinal_and_revised_bars() -> None:
     with pytest.raises(ValueError, match="not available"):
         stream.update(first, watermark=first.open_time)
     nonfinal = Bar(
-        venue=first.venue, market=first.market, instrument_id=first.instrument_id,
-        timeframe=first.timeframe, open_time=first.open_time, close_time=first.close_time,
-        open=first.open, high=first.high, low=first.low, close=first.close,
-        volume=first.volume, is_final=False, revision=1, available_at=first.available_at,
+        venue=first.venue,
+        market=first.market,
+        instrument_id=first.instrument_id,
+        timeframe=first.timeframe,
+        open_time=first.open_time,
+        close_time=first.close_time,
+        open=first.open,
+        high=first.high,
+        low=first.low,
+        close=first.close,
+        volume=first.volume,
+        is_final=False,
+        revision=1,
+        available_at=first.available_at,
     )
     with pytest.raises(ValueError, match="final"):
         stream.update(nonfinal)

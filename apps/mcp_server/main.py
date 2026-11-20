@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
-from typing import Any, AsyncIterator
+from typing import Annotated, Any, AsyncIterator
 from urllib.parse import ParseResult, urlparse
 from uuid import UUID
 
@@ -15,7 +15,7 @@ from mcp.server.auth.middleware.auth_context import get_access_token
 from mcp.server.auth.provider import AccessToken
 from mcp.server.auth.settings import AuthSettings
 from mcp.server.transport_security import TransportSecuritySettings
-from mcp_types import ToolAnnotations
+from mcp_types import CallToolResult, ToolAnnotations
 
 from gatescope.adapters.postgres import PostgresPool
 from gatescope.adapters.postgres_alert_rules import PostgresAlertRuleRepository
@@ -201,7 +201,7 @@ def create_mcp_server() -> MCPServer[Any]:
         timeframe: str = "15m",
         indicator_ids: list[str] | None = None,
         bar_limit: int = 500,
-    ) -> dict[str, Any]:
+    ) -> Annotated[CallToolResult, dict[str, Any]]:
         """Read latest candles, common indicators, Coinglass, chart PNG and formations/waves.
 
         Specify instrument_id OR exact symbol plus market (spot/futures:usdt/futures:btc).

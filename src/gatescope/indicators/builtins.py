@@ -4,11 +4,26 @@ from __future__ import annotations
 
 import math
 from collections import deque
-from typing import Mapping
+from decimal import Decimal
+from typing import Mapping, Protocol
 
 from gatescope.domain.market import Bar
 from gatescope.indicators.models import IndicatorValues
 from gatescope.indicators.registry import IndicatorDefinition, IndicatorRegistry, ParamSpec
+
+
+def _seed_total(values: list[float]) -> float:
+    # Use the recorded observation order for the original indicator seed.
+    # Python 3.12 changed the builtin float summation algorithm.
+    total = 0.0
+    for value in values:
+        total += value
+    return total
+
+
+class ClosingPrice(Protocol):
+    @property
+    def close(self) -> Decimal: ...
 
 
 class Rolling:
@@ -75,7 +90,7 @@ class EMAValue:
         if self.value is None:
             self.seed.append(value)
             if len(self.seed) == self.period:
-                self.value = sum(self.seed) / self.period
+                self.value = _seed_total(self.seed) / self.period
                 self.seed.clear()
         else:
             self.value += self.alpha * (value - self.value)
@@ -86,7 +101,7 @@ class EMA:
     def __init__(self, params: Mapping[str, int | float]) -> None:
         self.ema = EMAValue(int(params["period"]))
 
-    def update(self, bar: Bar, upstream: Mapping[str, IndicatorValues]) -> IndicatorValues:
+    def update(self, bar: ClosingPrice, upstream: Mapping[str, IndicatorValues]) -> IndicatorValues:
         return {"ema": self.ema.push(float(bar.close))}
 
 
@@ -119,7 +134,7 @@ class RSI:
         self.average_gain: float | None = None
         self.average_loss: float | None = None
 
-    def update(self, bar: Bar, upstream: Mapping[str, IndicatorValues]) -> IndicatorValues:
+    def update(self, bar: ClosingPrice, upstream: Mapping[str, IndicatorValues]) -> IndicatorValues:
         close = float(bar.close)
         if self.previous is None:
             self.previous = close
@@ -132,8 +147,8 @@ class RSI:
             self.losses.append(loss)
             if len(self.gains) < self.period:
                 return {"rsi": None}
-            self.average_gain = sum(self.gains) / self.period
-            self.average_loss = sum(self.losses) / self.period
+            self.average_gain = _seed_total(self.gains) / self.period
+            self.average_loss = _seed_total(self.losses) / self.period
             self.gains.clear()
             self.losses.clear()
         else:
@@ -174,7 +189,7 @@ class ATRValue:
         if self.value is None:
             self.seed.append(true_range)
             if len(self.seed) == self.period:
-                self.value = sum(self.seed) / self.period
+                self.value = _seed_total(self.seed) / self.period
                 self.seed.clear()
         else:
             self.value = ((self.period - 1) * self.value + true_range) / self.period
@@ -227,9 +242,9 @@ class ADX:
             self.minus_seed.append(minus_dm)
             if len(self.tr_seed) < self.period:
                 return self._empty()
-            self.smoothed_tr = sum(self.tr_seed)
-            self.smoothed_plus = sum(self.plus_seed)
-            self.smoothed_minus = sum(self.minus_seed)
+            self.smoothed_tr = _seed_total(self.tr_seed)
+            self.smoothed_plus = _seed_total(self.plus_seed)
+            self.smoothed_minus = _seed_total(self.minus_seed)
             self.tr_seed.clear()
             self.plus_seed.clear()
             self.minus_seed.clear()
@@ -245,7 +260,7 @@ class ADX:
         if self.adx is None:
             self.dx_seed.append(dx)
             if len(self.dx_seed) == self.period:
-                self.adx = sum(self.dx_seed) / self.period
+                self.adx = _seed_total(self.dx_seed) / self.period
                 self.dx_seed.clear()
         else:
             self.adx = ((self.period - 1) * self.adx + dx) / self.period

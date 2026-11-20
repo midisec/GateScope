@@ -197,6 +197,7 @@ class UserCreateRequest(BaseModel):
     @classmethod
     def password_bytes(cls, value: str) -> str:
         from gatescope.auth import validate_password
+
         validate_password(value)
         return value
 
@@ -245,7 +246,7 @@ class AlertConditionRequest(BaseModel):
             raise ValueError("pattern_ids contains an invalid identifier")
         from gatescope.quant.pattern_study import catalog
 
-        if any(item not in {pattern['id'] for pattern in catalog()} for item in value):
+        if any(item not in {pattern["id"] for pattern in catalog()} for item in value):
             raise ValueError("pattern_ids contains an unsupported pattern")
         return value
 
@@ -358,9 +359,9 @@ class NotificationRouteRequest(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     schema_version: Literal[1] = 1
     channel_id: UUID
-    event_types: list[
-        Literal["PROPOSAL", "FILL", "TP_SL", "RISK_CRITICAL", "RESEARCH_SIGNAL", "SYSTEM"]
-    ] = Field(min_length=1, max_length=6)
+    event_types: list[Literal["PROPOSAL", "FILL", "TP_SL", "RISK_CRITICAL", "RESEARCH_SIGNAL", "SYSTEM"]] = (
+        Field(min_length=1, max_length=6)
+    )
     strategy_ids: list[UUID] = Field(default_factory=list, max_length=100)
     exchange_account_ids: list[UUID] = Field(default_factory=list, max_length=100)
     symbols: list[str] = Field(default_factory=list, max_length=100)
@@ -396,8 +397,7 @@ class NotificationRouteRequest(BaseModel):
     @model_validator(mode="after")
     def risk_critical_always_bypasses_quiet_hours(self) -> "NotificationRouteRequest":
         if "RISK_CRITICAL" in self.event_types and not any(
-            item.event_type == "RISK_CRITICAL" and not item.environments
-            for item in self.bypass_quiet_rules
+            item.event_type == "RISK_CRITICAL" and not item.environments for item in self.bypass_quiet_rules
         ):
             raise ValueError("RISK_CRITICAL must bypass quiet hours in every environment")
         return self
@@ -409,7 +409,9 @@ class McpClientCreateRequest(BaseModel):
     name: str = Field(min_length=1, max_length=120)
 
 
-McpScope = Literal["mcp:connect", "market:read", "analysis:read", "alerts:read", "research:read", "paper:read", "paper:trade"]
+McpScope = Literal[
+    "mcp:connect", "market:read", "analysis:read", "alerts:read", "research:read", "paper:read", "paper:trade"
+]
 
 
 def _default_mcp_scopes() -> list[McpScope]:
@@ -559,7 +561,9 @@ def create_formal_app() -> FastAPI:
     login_workspaces = _login_workspace_slugs()
     telegram_values = (telegram_bot_username, telegram_webhook_id, telegram_webhook_secret)
     if any(telegram_values) and not all(telegram_values):
-        raise RuntimeError("Telegram API configuration must include bot username, webhook id and webhook secret")
+        raise RuntimeError(
+            "Telegram API configuration must include bot username, webhook id and webhook secret"
+        )
     if telegram_webhook_secret and re.fullmatch(r"[A-Za-z0-9_-]{16,256}", telegram_webhook_secret) is None:
         raise RuntimeError("GATESCOPE_TELEGRAM_WEBHOOK_SECRET has an invalid format")
     if telegram_webhook_id and re.fullmatch(r"[A-Za-z0-9_-]{32,128}", telegram_webhook_id) is None:
@@ -575,7 +579,9 @@ def create_formal_app() -> FastAPI:
         finally:
             pool.close()
 
-    app = FastAPI(title="GateScope V2", version="2.0.0-phase1", docs_url=None, redoc_url=None, lifespan=lifespan)
+    app = FastAPI(
+        title="GateScope V2", version="2.0.0-phase1", docs_url=None, redoc_url=None, lifespan=lifespan
+    )
     app.state.pool = pool
     app.state.identity = identity
     app.add_middleware(
@@ -594,7 +600,8 @@ def create_formal_app() -> FastAPI:
     telegram_configs = PostgresTelegramConfigRepository(pool)
     from gatescope.adapters.postgres_telegram_market import TelegramMarketRepository
     from gatescope.application.telegram_market import market_command, callback_update
-    telegram_market=TelegramMarketRepository(pool)
+
+    telegram_market = TelegramMarketRepository(pool)
     coinglass_configs = PostgresCoinglassRepository(pool)
     telegram_admin = TelegramBotAdmin()
     mcp_access = PostgresMcpRepository(pool)
@@ -625,7 +632,10 @@ def create_formal_app() -> FastAPI:
     def health_ready() -> JSONResponse:
         healthy = pool.healthy()
         return JSONResponse(
-            {"status": "ready" if healthy else "not_ready", "checks": {"database": "ok" if healthy else "unavailable"}},
+            {
+                "status": "ready" if healthy else "not_ready",
+                "checks": {"database": "ok" if healthy else "unavailable"},
+            },
             status_code=200 if healthy else 503,
         )
 
@@ -661,13 +671,7 @@ def create_formal_app() -> FastAPI:
                 (list(login_workspaces),),
             ).fetchall()
         names = {str(row[0]): str(row[1]) for row in rows}
-        return {
-            "items": [
-                {"slug": slug, "name": names[slug]}
-                for slug in login_workspaces
-                if slug in names
-            ]
-        }
+        return {"items": [{"slug": slug, "name": names[slug]} for slug in login_workspaces if slug in names]}
 
     def worker_health(workload: str) -> dict[str, Any]:
         if workload not in {"market-worker", "strategy-worker", "research-worker"}:
@@ -714,17 +718,23 @@ def create_formal_app() -> FastAPI:
         return {
             "items": [
                 {
-                    "id": "gate", "name": "Gate 公共行情", "configured": True,
-                    "state": worker["state"], "secret_location": "NONE_REQUIRED",
+                    "id": "gate",
+                    "name": "Gate 公共行情",
+                    "configured": True,
+                    "state": worker["state"],
+                    "secret_location": "NONE_REQUIRED",
                 },
                 {
-                    "id": "coinglass", "name": "Coinglass / LSR",
-                    "configured": (
-                        web_coinglass is not None and web_coinglass.status != "DISABLED"
-                    ) or coinglass is not None,
+                    "id": "coinglass",
+                    "name": "Coinglass / LSR",
+                    "configured": (web_coinglass is not None and web_coinglass.status != "DISABLED")
+                    or coinglass is not None,
                     "state": (
-                        web_coinglass.status if web_coinglass is not None
-                        else "READY_TO_TEST" if coinglass is not None else "SECRET_REQUIRED"
+                        web_coinglass.status
+                        if web_coinglass is not None
+                        else "READY_TO_TEST"
+                        if coinglass is not None
+                        else "SECRET_REQUIRED"
                     ),
                     "origin": COINGLASS_ORIGIN,
                     "secret_location": (
@@ -732,20 +742,20 @@ def create_formal_app() -> FastAPI:
                         if web_coinglass is not None or coinglass is None
                         else "LEGACY_SERVER_SECRET"
                     ),
-                    "key_fingerprint": (
-                        web_coinglass.key_fingerprint if web_coinglass is not None else None
-                    ),
-                    "last_tested_at": (
-                        web_coinglass.last_tested_at if web_coinglass is not None else None
-                    ),
+                    "key_fingerprint": (web_coinglass.key_fingerprint if web_coinglass is not None else None),
+                    "last_tested_at": (web_coinglass.last_tested_at if web_coinglass is not None else None),
                     "automatic_feature_eligible": False,
                 },
                 {
-                    "id": "telegram", "name": "Telegram Bot",
+                    "id": "telegram",
+                    "name": "Telegram Bot",
                     "configured": bool(configured_bot_username),
                     "state": (
-                        web_telegram.status if web_telegram is not None
-                        else "CONFIGURED" if telegram_bot_username else "SECRET_REQUIRED"
+                        web_telegram.status
+                        if web_telegram is not None
+                        else "CONFIGURED"
+                        if telegram_bot_username
+                        else "SECRET_REQUIRED"
                     ),
                     "bot_username": configured_bot_username or None,
                     "secret_location": "NOTIFICATION_WORKER_ONLY",
@@ -779,7 +789,9 @@ def create_formal_app() -> FastAPI:
         return {**payload, "latest_test": _coinglass_test_payload(latest_test) if latest_test else None}
 
     @app.put(
-        "/api/v2/data-sources/coinglass/config", status_code=202, response_model=None,
+        "/api/v2/data-sources/coinglass/config",
+        status_code=202,
+        response_model=None,
     )
     def configure_coinglass(payload: CoinglassConfigSubmission, request: Request) -> Any:
         denied = _require_owner(request)
@@ -787,8 +799,10 @@ def create_formal_app() -> FastAPI:
             return denied
         if coinglass_config_encryptor is None:
             return error_response(
-                503, "COINGLASS_SECRET_STORAGE_UNAVAILABLE",
-                "Coinglass 加密存储尚未初始化", request.state.trace_id,
+                503,
+                "COINGLASS_SECRET_STORAGE_UNAVAILABLE",
+                "Coinglass 加密存储尚未初始化",
+                request.state.trace_id,
             )
         session = request.state.auth_session
         resolved = _resolve_sensitive_submission(
@@ -802,24 +816,34 @@ def create_formal_app() -> FastAPI:
             return resolved
         try:
             session = identity.reauthenticate_password(
-                session, resolved.current_password, trace_id=request.state.trace_id,
+                session,
+                resolved.current_password,
+                trace_id=request.state.trace_id,
             )
             identity.verify_session_mfa(
-                session, resolved.mfa_code, trace_id=request.state.trace_id,
+                session,
+                resolved.mfa_code,
+                trace_id=request.state.trace_id,
             )
         except FormalInvalidCredentials:
             return error_response(
-                401, "INVALID_CREDENTIALS_OR_MFA",
+                401,
+                "INVALID_CREDENTIALS_OR_MFA",
                 "当前密码或 MFA 验证码无效，验证码也可能已使用",
                 request.state.trace_id,
             )
         allowed, retry_after = provider_limiter.allow(
-            f"coinglass-config:{session.tenant_id}", 3, 60,
+            f"coinglass-config:{session.tenant_id}",
+            3,
+            60,
         )
         if not allowed:
             return error_response(
-                429, "COINGLASS_CONFIG_RATE_LIMITED", "配置过于频繁，请稍后重试",
-                request.state.trace_id, **{"Retry-After": str(retry_after)},
+                429,
+                "COINGLASS_CONFIG_RATE_LIMITED",
+                "配置过于频繁，请稍后重试",
+                request.state.trace_id,
+                **{"Retry-After": str(retry_after)},
             )
         try:
             config, job = coinglass_configs.save_and_enqueue(
@@ -831,7 +855,9 @@ def create_formal_app() -> FastAPI:
             )
         except ValueError:
             return error_response(
-                422, "COINGLASS_CONFIG_INVALID", "Coinglass 配置无效",
+                422,
+                "COINGLASS_CONFIG_INVALID",
+                "Coinglass 配置无效",
                 request.state.trace_id,
             )
         return {
@@ -854,7 +880,9 @@ def create_formal_app() -> FastAPI:
         allowed, retry_after = provider_limiter.allow(f"coinglass-test:{session.tenant_id}", 3, 60)
         if not allowed:
             result = error_response(
-                429, "COINGLASS_TEST_RATE_LIMITED", "测试过于频繁，请稍后重试",
+                429,
+                "COINGLASS_TEST_RATE_LIMITED",
+                "测试过于频繁，请稍后重试",
                 request.state.trace_id,
             )
             result.headers["Retry-After"] = str(retry_after)
@@ -863,16 +891,22 @@ def create_formal_app() -> FastAPI:
         if web_config is not None:
             try:
                 job = coinglass_configs.enqueue_test(
-                    session.tenant_id, session.user_id, test_symbol="BTC",
+                    session.tenant_id,
+                    session.user_id,
+                    test_symbol="BTC",
                 )
             except CoinglassConfigDisabled:
                 return error_response(
-                    409, "COINGLASS_CONFIG_DISABLED", "Coinglass 配置已停用",
+                    409,
+                    "COINGLASS_CONFIG_DISABLED",
+                    "Coinglass 配置已停用",
                     request.state.trace_id,
                 )
             except RuntimeError:
                 return error_response(
-                    409, "COINGLASS_TEST_ALREADY_QUEUED", "检测任务已经在执行",
+                    409,
+                    "COINGLASS_TEST_ALREADY_QUEUED",
+                    "检测任务已经在执行",
                     request.state.trace_id,
                 )
             response.status_code = 202
@@ -881,8 +915,10 @@ def create_formal_app() -> FastAPI:
             return {"test": _coinglass_test_payload(job), "trace_id": request.state.trace_id}
         if coinglass is None:
             return error_response(
-                409, "COINGLASS_SECRET_REQUIRED",
-                "Coinglass Key 尚未注入服务器 Secret", request.state.trace_id,
+                409,
+                "COINGLASS_SECRET_REQUIRED",
+                "Coinglass Key 尚未注入服务器 Secret",
+                request.state.trace_id,
             )
         try:
             markets = coinglass.get_coins_markets(per_page=10)
@@ -890,7 +926,10 @@ def create_formal_app() -> FastAPI:
             account = coinglass.get_account(force=True)
         except CoinglassRateLimited as exc:
             result = error_response(
-                429, exc.code, "上游限流，已停止继续重试", request.state.trace_id,
+                429,
+                exc.code,
+                "上游限流，已停止继续重试",
+                request.state.trace_id,
             )
             result.headers["Retry-After"] = str(exc.retry_after_seconds)
             return result
@@ -902,15 +941,21 @@ def create_formal_app() -> FastAPI:
             "origin": COINGLASS_ORIGIN,
             "checks": {
                 "coins_markets": {
-                    "ok": True, "items": len(markets.data), "elapsed_ms": markets.elapsed_ms,
+                    "ok": True,
+                    "items": len(markets.data),
+                    "elapsed_ms": markets.elapsed_ms,
                     "received_at": markets.received_at,
                 },
                 "lsr_btc": {
-                    "ok": True, "elapsed_ms": lsr.elapsed_ms, "received_at": lsr.received_at,
+                    "ok": True,
+                    "elapsed_ms": lsr.elapsed_ms,
+                    "received_at": lsr.received_at,
                     "fields": sorted(str(key) for key in lsr.data.keys())[:40],
                 },
                 "account": {
-                    "ok": True, "elapsed_ms": account.elapsed_ms, "received_at": account.received_at,
+                    "ok": True,
+                    "elapsed_ms": account.elapsed_ms,
+                    "received_at": account.received_at,
                     "metadata": _safe_provider_metadata(account.data),
                 },
             },
@@ -929,7 +974,9 @@ def create_formal_app() -> FastAPI:
             job = coinglass_configs.get_test(session.tenant_id, session.user_id, job_id)
         except CoinglassConfigNotFound:
             return error_response(
-                404, "COINGLASS_TEST_NOT_FOUND", "检测任务不存在",
+                404,
+                "COINGLASS_TEST_NOT_FOUND",
+                "检测任务不存在",
                 request.state.trace_id,
             )
         response.headers["Cache-Control"] = "no-store"
@@ -943,16 +990,23 @@ def create_formal_app() -> FastAPI:
         session = request.state.auth_session
         try:
             identity.verify_session_mfa(
-                session, payload.code, trace_id=request.state.trace_id,
+                session,
+                payload.code,
+                trace_id=request.state.trace_id,
             )
             coinglass_configs.disable(session.tenant_id, session.user_id)
         except FormalInvalidCredentials:
             return error_response(
-                401, "INVALID_MFA_CODE", "验证码无效或已使用", request.state.trace_id,
+                401,
+                "INVALID_MFA_CODE",
+                "验证码无效或已使用",
+                request.state.trace_id,
             )
         except CoinglassConfigNotFound:
             return error_response(
-                404, "COINGLASS_CONFIG_NOT_FOUND", "Coinglass 配置不存在",
+                404,
+                "COINGLASS_CONFIG_NOT_FOUND",
+                "Coinglass 配置不存在",
                 request.state.trace_id,
             )
         return {"disabled": True, "trace_id": request.state.trace_id}
@@ -963,7 +1017,10 @@ def create_formal_app() -> FastAPI:
         allowed, retry_after = login_limiter.allow(f"formal-login:{client_key}", 10, 600)
         if not allowed:
             return error_response(
-                429, "LOGIN_RATE_LIMITED", "登录尝试过多，请稍后重试", request.state.trace_id,
+                429,
+                "LOGIN_RATE_LIMITED",
+                "登录尝试过多，请稍后重试",
+                request.state.trace_id,
                 **{"Retry-After": str(retry_after)},
             )
         resolved = _resolve_sensitive_submission(
@@ -977,19 +1034,30 @@ def create_formal_app() -> FastAPI:
             return resolved
         try:
             created = identity.authenticate_password(
-                resolved.tenant, resolved.username, resolved.password, trace_id=request.state.trace_id,
+                resolved.tenant,
+                resolved.username,
+                resolved.password,
+                trace_id=request.state.trace_id,
             )
         except FormalInvalidCredentials:
             return error_response(401, "INVALID_CREDENTIALS", "账号或密码错误", request.state.trace_id)
-        response = JSONResponse({
-            "user": {
-                "id": str(created.session.user_id), "tenant_id": str(created.session.tenant_id),
-                "username": created.session.username, "role": created.session.role.value,
-            },
-            "expires_at": created.session.expires_at.isoformat(),
-            "mfa_required": not created.session.fully_authenticated,
-        })
-        max_age = max(0, int((created.session.expires_at - created.session.recent_auth_at).total_seconds())) if created.session.recent_auth_at else 43_200
+        response = JSONResponse(
+            {
+                "user": {
+                    "id": str(created.session.user_id),
+                    "tenant_id": str(created.session.tenant_id),
+                    "username": created.session.username,
+                    "role": created.session.role.value,
+                },
+                "expires_at": created.session.expires_at.isoformat(),
+                "mfa_required": not created.session.fully_authenticated,
+            }
+        )
+        max_age = (
+            max(0, int((created.session.expires_at - created.session.recent_auth_at).total_seconds()))
+            if created.session.recent_auth_at
+            else 43_200
+        )
         _set_auth_cookies(response, created.token, created.csrf_token, max_age, cookie_secure)
         return response
 
@@ -998,8 +1066,10 @@ def create_formal_app() -> FastAPI:
         session = request.state.auth_session
         return {
             "user": {
-                "id": str(session.user_id), "tenant_id": str(session.tenant_id),
-                "username": session.username, "role": session.role.value,
+                "id": str(session.user_id),
+                "tenant_id": str(session.tenant_id),
+                "username": session.username,
+                "role": session.role.value,
             },
             "expires_at": session.expires_at.isoformat(),
             "mfa_required": not session.fully_authenticated,
@@ -1016,11 +1086,16 @@ def create_formal_app() -> FastAPI:
         """
         session = request.state.auth_session
         allowed, retry_after = reauthentication_limiter.allow(
-            f"reauthenticate:{session.tenant_id}:{session.user_id}", 5, 300,
+            f"reauthenticate:{session.tenant_id}:{session.user_id}",
+            5,
+            300,
         )
         if not allowed:
             return error_response(
-                429, "REAUTH_RATE_LIMITED", "密码确认尝试过多，请稍后重试", request.state.trace_id,
+                429,
+                "REAUTH_RATE_LIMITED",
+                "密码确认尝试过多，请稍后重试",
+                request.state.trace_id,
                 **{"Retry-After": str(retry_after)},
             )
         resolved = _resolve_sensitive_submission(
@@ -1034,7 +1109,9 @@ def create_formal_app() -> FastAPI:
             return resolved
         try:
             refreshed = identity.reauthenticate_password(
-                session, resolved.password, trace_id=request.state.trace_id,
+                session,
+                resolved.password,
+                trace_id=request.state.trace_id,
             )
         except FormalInvalidCredentials:
             return error_response(401, "INVALID_CREDENTIALS", "当前密码不正确", request.state.trace_id)
@@ -1050,7 +1127,9 @@ def create_formal_app() -> FastAPI:
         methods = identity.list_mfa_methods(session)
         if not session.fully_authenticated and any(item["status"] == "ACTIVE" for item in methods):
             return error_response(
-                403, "MFA_REQUIRED", "已有验证器时，必须先使用验证器或恢复码完成认证",
+                403,
+                "MFA_REQUIRED",
+                "已有验证器时，必须先使用验证器或恢复码完成认证",
                 request.state.trace_id,
             )
         enrollment = identity.enroll_totp(session, label=payload.label)
@@ -1065,7 +1144,10 @@ def create_formal_app() -> FastAPI:
     def confirm_mfa(method_id: UUID, payload: MfaCodeRequest, request: Request) -> Any:
         try:
             identity.confirm_totp(
-                request.state.auth_session, method_id, payload.code, trace_id=request.state.trace_id,
+                request.state.auth_session,
+                method_id,
+                payload.code,
+                trace_id=request.state.trace_id,
             )
         except FormalInvalidCredentials:
             return error_response(401, "INVALID_MFA_CODE", "验证码无效", request.state.trace_id)
@@ -1077,7 +1159,9 @@ def create_formal_app() -> FastAPI:
     def verify_mfa(payload: MfaCodeRequest, request: Request) -> Any:
         try:
             session = identity.verify_session_mfa(
-                request.state.auth_session, payload.code, trace_id=request.state.trace_id,
+                request.state.auth_session,
+                payload.code,
+                trace_id=request.state.trace_id,
             )
         except FormalInvalidCredentials:
             return error_response(401, "INVALID_MFA_CODE", "验证码无效", request.state.trace_id)
@@ -1093,15 +1177,21 @@ def create_formal_app() -> FastAPI:
             or session.recent_auth_at < cutoff
             or session.mfa_verified_at < cutoff
         ):
-            return error_response(403, "RECENT_MFA_REQUIRED", "需要近期密码与多因素认证", request.state.trace_id)
-        codes = identity.regenerate_recovery_codes(request.state.auth_session, trace_id=request.state.trace_id)
+            return error_response(
+                403, "RECENT_MFA_REQUIRED", "需要近期密码与多因素认证", request.state.trace_id
+            )
+        codes = identity.regenerate_recovery_codes(
+            request.state.auth_session, trace_id=request.state.trace_id
+        )
         return {"codes": codes, "shown_once": True}
 
     @app.post("/auth/recovery-codes:consume")
     def consume_recovery(payload: RecoveryCodeRequest, request: Request) -> Any:
         try:
             session = identity.consume_recovery_code(
-                request.state.auth_session, payload.code, trace_id=request.state.trace_id,
+                request.state.auth_session,
+                payload.code,
+                trace_id=request.state.trace_id,
             )
         except (FormalInvalidCredentials, UnicodeError, ValueError):
             return error_response(401, "INVALID_RECOVERY_CODE", "恢复码无效", request.state.trace_id)
@@ -1112,7 +1202,9 @@ def create_formal_app() -> FastAPI:
         session = request.state.auth_session
         identity.revoke_session(session, session.session_id, trace_id=request.state.trace_id)
         response = JSONResponse({"ok": True})
-        response.delete_cookie(SESSION_COOKIE, path="/", secure=cookie_secure, httponly=True, samesite="strict")
+        response.delete_cookie(
+            SESSION_COOKIE, path="/", secure=cookie_secure, httponly=True, samesite="strict"
+        )
         response.delete_cookie(CSRF_COOKIE, path="/", secure=cookie_secure, httponly=False, samesite="strict")
         return response
 
@@ -1133,7 +1225,10 @@ def create_formal_app() -> FastAPI:
 
     @app.get("/auth/sessions")
     def sessions(request: Request) -> dict[str, Any]:
-        return {"items": identity.list_sessions(request.state.auth_session), "trace_id": request.state.trace_id}
+        return {
+            "items": identity.list_sessions(request.state.auth_session),
+            "trace_id": request.state.trace_id,
+        }
 
     @app.delete("/auth/sessions/{session_id}", response_model=None)
     def revoke_session(session_id: UUID, request: Request) -> dict[str, bool] | JSONResponse:
@@ -1145,7 +1240,10 @@ def create_formal_app() -> FastAPI:
 
     @app.get("/auth/mfa-methods")
     def mfa_methods(request: Request) -> dict[str, Any]:
-        return {"items": identity.list_mfa_methods(request.state.auth_session), "trace_id": request.state.trace_id}
+        return {
+            "items": identity.list_mfa_methods(request.state.auth_session),
+            "trace_id": request.state.trace_id,
+        }
 
     @app.delete("/auth/mfa-methods/{method_id}", response_model=None)
     def remove_mfa(method_id: UUID, request: Request) -> dict[str, bool] | JSONResponse:
@@ -1154,13 +1252,17 @@ def create_formal_app() -> FastAPI:
         target = next((item for item in methods if item["id"] == str(method_id)), None)
         if target is not None and target["status"] == "ACTIVE" and not session.fully_authenticated:
             return error_response(
-                403, "MFA_REQUIRED", "必须先完成多因素认证才能移除有效验证器",
+                403,
+                "MFA_REQUIRED",
+                "必须先完成多因素认证才能移除有效验证器",
                 request.state.trace_id,
             )
         try:
             identity.remove_mfa_method(session, method_id, trace_id=request.state.trace_id)
         except LastMfaMethodRequired:
-            return error_response(409, "LAST_MFA_REQUIRED", "不能移除最后一个必需验证器", request.state.trace_id)
+            return error_response(
+                409, "LAST_MFA_REQUIRED", "不能移除最后一个必需验证器", request.state.trace_id
+            )
         except FormalAuthError:
             return error_response(404, "MFA_METHOD_NOT_FOUND", "验证器不存在", request.state.trace_id)
         return {"revoked": True}
@@ -1179,7 +1281,9 @@ def create_formal_app() -> FastAPI:
         if denied is not None:
             return denied
         resolved = _resolve_sensitive_submission(
-            payload, request, decryptor=submission_decryptor,
+            payload,
+            request,
+            decryptor=submission_decryptor,
             expected_purpose=f"tenant:{request.state.auth_session.tenant_id}:user_create",
             model_type=UserCreateRequest,
         )
@@ -1196,7 +1300,9 @@ def create_formal_app() -> FastAPI:
         except IdentityConflict:
             return error_response(409, "USERNAME_UNAVAILABLE", "用户名不可用", request.state.trace_id)
         except FormalAuthError:
-            return error_response(403, "RECENT_OWNER_AUTH_REQUIRED", "需要 OWNER 近期认证", request.state.trace_id)
+            return error_response(
+                403, "RECENT_OWNER_AUTH_REQUIRED", "需要 OWNER 近期认证", request.state.trace_id
+            )
         except ValueError:
             return error_response(422, "INVALID_USER", "用户名或密码格式无效", request.state.trace_id)
 
@@ -1239,7 +1345,9 @@ def create_formal_app() -> FastAPI:
         except IdentityPreconditionFailed:
             return error_response(412, "PRECONDITION_FAILED", "成员版本已变化", request.state.trace_id)
         except LastOwnerRequired:
-            return error_response(409, "LAST_OWNER_REQUIRED", "不能移除最后一个 OWNER", request.state.trace_id)
+            return error_response(
+                409, "LAST_OWNER_REQUIRED", "不能移除最后一个 OWNER", request.state.trace_id
+            )
         except FormalAuthError:
             return error_response(404, "MEMBERSHIP_NOT_FOUND", "成员不存在或权限不足", request.state.trace_id)
         except ValueError:
@@ -1249,7 +1357,9 @@ def create_formal_app() -> FastAPI:
     def list_resources(kind: Any, request: Request) -> dict[str, Any]:
         session = request.state.auth_session
         return {
-            "items": [_resource_payload(item) for item in resources.list(kind, session.tenant_id, session.user_id)],
+            "items": [
+                _resource_payload(item) for item in resources.list(kind, session.tenant_id, session.user_id)
+            ],
             "next_cursor": None,
             "has_more": False,
             "trace_id": request.state.trace_id,
@@ -1264,11 +1374,17 @@ def create_formal_app() -> FastAPI:
         response.headers["ETag"] = f'"{item.etag}"'
         return _resource_payload(item)
 
-    def create_resource(kind: Any, payload: ResourceWriteRequest, request: Request, response: Response) -> Any:
+    def create_resource(
+        kind: Any, payload: ResourceWriteRequest, request: Request, response: Response
+    ) -> Any:
         session = request.state.auth_session
         try:
             item = resources.create(
-                kind, session.tenant_id, session.user_id, name=payload.name, spec=payload.spec,
+                kind,
+                session.tenant_id,
+                session.user_id,
+                name=payload.name,
+                spec=payload.spec,
             )
         except ResourceConflict:
             return error_response(409, "RESOURCE_NAME_CONFLICT", "同名配置已存在", request.state.trace_id)
@@ -1288,8 +1404,13 @@ def create_formal_app() -> FastAPI:
         try:
             expected = _etag(if_match)
             item = resources.update(
-                kind, session.tenant_id, session.user_id, resource_id,
-                name=payload.name, spec=payload.spec, expected_etag=expected,
+                kind,
+                session.tenant_id,
+                session.user_id,
+                resource_id,
+                name=payload.name,
+                spec=payload.spec,
+                expected_etag=expected,
             )
         except ValueError:
             return error_response(422, "INVALID_ETAG", "If-Match 无效", request.state.trace_id)
@@ -1324,7 +1445,10 @@ def create_formal_app() -> FastAPI:
 
     @app.patch("/api/v2/chart-layouts/{resource_id}", response_model=None)
     def update_chart_layout(
-        resource_id: UUID, payload: ResourceWriteRequest, request: Request, response: Response,
+        resource_id: UUID,
+        payload: ResourceWriteRequest,
+        request: Request,
+        response: Response,
         if_match: Annotated[str, Header(alias="If-Match")],
     ) -> Any:
         return update_resource("chart_layout", resource_id, payload, request, response, if_match)
@@ -1347,7 +1471,10 @@ def create_formal_app() -> FastAPI:
 
     @app.patch("/api/v2/indicator-templates/{resource_id}", response_model=None)
     def update_indicator_template(
-        resource_id: UUID, payload: ResourceWriteRequest, request: Request, response: Response,
+        resource_id: UUID,
+        payload: ResourceWriteRequest,
+        request: Request,
+        response: Response,
         if_match: Annotated[str, Header(alias="If-Match")],
     ) -> Any:
         return update_resource("indicator_template", resource_id, payload, request, response, if_match)
@@ -1356,7 +1483,9 @@ def create_formal_app() -> FastAPI:
     def delete_indicator_template(resource_id: UUID, request: Request) -> Any:
         return delete_resource("indicator_template", resource_id, request)
 
-    def watchlist_result(item: Watchlist, request: Request, response: Response | None = None) -> dict[str, Any]:
+    def watchlist_result(
+        item: Watchlist, request: Request, response: Response | None = None
+    ) -> dict[str, Any]:
         if response is not None:
             response.headers["ETag"] = f'"{item.etag}"'
         return {**_watchlist_payload(item), "trace_id": request.state.trace_id}
@@ -1366,8 +1495,7 @@ def create_formal_app() -> FastAPI:
         session = request.state.auth_session
         return {
             "items": [
-                _watchlist_payload(item)
-                for item in watchlists.list(session.tenant_id, session.user_id)
+                _watchlist_payload(item) for item in watchlists.list(session.tenant_id, session.user_id)
             ],
             "next_cursor": None,
             "has_more": False,
@@ -1376,13 +1504,17 @@ def create_formal_app() -> FastAPI:
 
     @app.post("/api/v2/watchlists", status_code=201, response_model=None)
     def create_watchlist(
-        payload: WatchlistWriteRequest, request: Request, response: Response,
+        payload: WatchlistWriteRequest,
+        request: Request,
+        response: Response,
     ) -> Any:
         session = request.state.auth_session
         try:
             item = watchlists.create(session.tenant_id, session.user_id, payload.name)
         except WatchlistConflict:
-            return error_response(409, "WATCHLIST_NAME_CONFLICT", "同名观察列表已存在", request.state.trace_id)
+            return error_response(
+                409, "WATCHLIST_NAME_CONFLICT", "同名观察列表已存在", request.state.trace_id
+            )
         response.headers["Location"] = f"/api/v2/watchlists/{item.id}"
         return watchlist_result(item, request, response)
 
@@ -1406,8 +1538,11 @@ def create_formal_app() -> FastAPI:
         session = request.state.auth_session
         try:
             item = watchlists.rename(
-                session.tenant_id, session.user_id, watchlist_id,
-                name=payload.name, expected_etag=_etag(if_match),
+                session.tenant_id,
+                session.user_id,
+                watchlist_id,
+                name=payload.name,
+                expected_etag=_etag(if_match),
             )
         except ValueError:
             return error_response(422, "INVALID_ETAG", "If-Match 无效", request.state.trace_id)
@@ -1416,7 +1551,9 @@ def create_formal_app() -> FastAPI:
         except WatchlistPreconditionFailed:
             return error_response(412, "PRECONDITION_FAILED", "观察列表版本已变化", request.state.trace_id)
         except WatchlistConflict:
-            return error_response(409, "WATCHLIST_NAME_CONFLICT", "同名观察列表已存在", request.state.trace_id)
+            return error_response(
+                409, "WATCHLIST_NAME_CONFLICT", "同名观察列表已存在", request.state.trace_id
+            )
         return watchlist_result(item, request, response)
 
     @app.post("/api/v2/watchlists/{watchlist_id}/items", status_code=201, response_model=None)
@@ -1430,7 +1567,9 @@ def create_formal_app() -> FastAPI:
         session = request.state.auth_session
         try:
             item = watchlists.add_item(
-                session.tenant_id, session.user_id, watchlist_id,
+                session.tenant_id,
+                session.user_id,
+                watchlist_id,
                 instrument_id=payload.instrument_id,
                 default_timeframe=payload.default_timeframe,
                 expected_etag=_etag(if_match),
@@ -1442,7 +1581,9 @@ def create_formal_app() -> FastAPI:
         except WatchlistPreconditionFailed:
             return error_response(412, "PRECONDITION_FAILED", "观察列表版本已变化", request.state.trace_id)
         except WatchlistConflict:
-            return error_response(409, "WATCHLIST_ITEM_CONFLICT", "标的不可用或已存在", request.state.trace_id)
+            return error_response(
+                409, "WATCHLIST_ITEM_CONFLICT", "标的不可用或已存在", request.state.trace_id
+            )
         return watchlist_result(item, request, response)
 
     @app.delete("/api/v2/watchlists/{watchlist_id}/items/{instrument_id}", response_model=None)
@@ -1456,18 +1597,25 @@ def create_formal_app() -> FastAPI:
         session = request.state.auth_session
         try:
             item = watchlists.remove_item(
-                session.tenant_id, session.user_id, watchlist_id,
-                instrument_id=instrument_id, expected_etag=_etag(if_match),
+                session.tenant_id,
+                session.user_id,
+                watchlist_id,
+                instrument_id=instrument_id,
+                expected_etag=_etag(if_match),
             )
         except ValueError:
             return error_response(422, "INVALID_ETAG", "If-Match 无效", request.state.trace_id)
         except WatchlistNotFound:
-            return error_response(404, "WATCHLIST_ITEM_NOT_FOUND", "观察列表或标的不存在", request.state.trace_id)
+            return error_response(
+                404, "WATCHLIST_ITEM_NOT_FOUND", "观察列表或标的不存在", request.state.trace_id
+            )
         except WatchlistPreconditionFailed:
             return error_response(412, "PRECONDITION_FAILED", "观察列表版本已变化", request.state.trace_id)
         return watchlist_result(item, request, response)
 
-    def alert_rule_result(item: AlertRule, request: Request, response: Response | None = None) -> dict[str, Any]:
+    def alert_rule_result(
+        item: AlertRule, request: Request, response: Response | None = None
+    ) -> dict[str, Any]:
         if response is not None:
             response.headers["ETag"] = f'"{item.etag}"'
         return {**_alert_rule_payload(item), "trace_id": request.state.trace_id}
@@ -1477,8 +1625,7 @@ def create_formal_app() -> FastAPI:
         session = request.state.auth_session
         return {
             "items": [
-                _alert_rule_payload(item)
-                for item in alert_rules.list(session.tenant_id, session.user_id)
+                _alert_rule_payload(item) for item in alert_rules.list(session.tenant_id, session.user_id)
             ],
             "next_cursor": None,
             "has_more": False,
@@ -1493,7 +1640,9 @@ def create_formal_app() -> FastAPI:
         session = request.state.auth_session
         return {
             "items": alert_rules.list_events(
-                session.tenant_id, session.user_id, limit=limit,
+                session.tenant_id,
+                session.user_id,
+                limit=limit,
             ),
             "next_cursor": None,
             "has_more": False,
@@ -1502,7 +1651,9 @@ def create_formal_app() -> FastAPI:
 
     @app.post("/api/v2/alert-rules", status_code=201, response_model=None)
     def create_alert_rule(
-        payload: AlertRuleCreateRequest, request: Request, response: Response,
+        payload: AlertRuleCreateRequest,
+        request: Request,
+        response: Response,
     ) -> Any:
         denied = _require_alert_write(request)
         if denied is not None:
@@ -1510,12 +1661,16 @@ def create_formal_app() -> FastAPI:
         session = request.state.auth_session
         try:
             item = alert_rules.create(
-                session.tenant_id, session.user_id, name=payload.name,
+                session.tenant_id,
+                session.user_id,
+                name=payload.name,
                 condition=payload.condition.model_dump(mode="json"),
                 routing=payload.routing.model_dump(mode="json"),
             )
         except AlertRuleConflict:
-            return error_response(409, "ALERT_RULE_CONFLICT", "规则名称冲突或标的不可用", request.state.trace_id)
+            return error_response(
+                409, "ALERT_RULE_CONFLICT", "规则名称冲突或标的不可用", request.state.trace_id
+            )
         response.headers["Location"] = f"/api/v2/alert-rules/{item.id}"
         return alert_rule_result(item, request, response)
 
@@ -1542,8 +1697,11 @@ def create_formal_app() -> FastAPI:
         session = request.state.auth_session
         try:
             item = alert_rules.rename(
-                session.tenant_id, session.user_id, rule_id,
-                name=payload.name, expected_etag=_etag(if_match),
+                session.tenant_id,
+                session.user_id,
+                rule_id,
+                name=payload.name,
+                expected_etag=_etag(if_match),
             )
         except ValueError:
             return error_response(422, "INVALID_ETAG", "If-Match 无效", request.state.trace_id)
@@ -1552,33 +1710,51 @@ def create_formal_app() -> FastAPI:
         except AlertRulePreconditionFailed:
             return error_response(412, "PRECONDITION_FAILED", "告警规则版本已变化", request.state.trace_id)
         except AlertRuleConflict:
-            return error_response(409, "ALERT_RULE_NAME_CONFLICT", "同名告警规则已存在", request.state.trace_id)
+            return error_response(
+                409, "ALERT_RULE_NAME_CONFLICT", "同名告警规则已存在", request.state.trace_id
+            )
         return alert_rule_result(item, request, response)
 
     @app.put("/api/v2/alert-rules/{rule_id}", response_model=None)
-    def update_alert_rule(rule_id: UUID, payload: AlertRuleCreateRequest, request: Request,
-                          response: Response, if_match: Annotated[str, Header(alias="If-Match")]) -> Any:
+    def update_alert_rule(
+        rule_id: UUID,
+        payload: AlertRuleCreateRequest,
+        request: Request,
+        response: Response,
+        if_match: Annotated[str, Header(alias="If-Match")],
+    ) -> Any:
         denied = _require_alert_write(request)
         if denied is not None:
             return denied
         session = request.state.auth_session
         try:
-            item = alert_rules.update(session.tenant_id, session.user_id, rule_id,
-                name=payload.name, condition=payload.condition.model_dump(mode="json"),
-                routing=payload.routing.model_dump(mode="json"), expected_etag=_etag(if_match))
+            item = alert_rules.update(
+                session.tenant_id,
+                session.user_id,
+                rule_id,
+                name=payload.name,
+                condition=payload.condition.model_dump(mode="json"),
+                routing=payload.routing.model_dump(mode="json"),
+                expected_etag=_etag(if_match),
+            )
         except ValueError:
             return error_response(422, "INVALID_INPUT", "名称或版本参数无效", request.state.trace_id)
         except AlertRuleNotFound:
             return error_response(404, "ALERT_RULE_NOT_FOUND", "策略不存在或已删除", request.state.trace_id)
         except AlertRulePreconditionFailed:
-            return error_response(412, "PRECONDITION_FAILED", "策略已变化，请重新打开编辑；本次未保存", request.state.trace_id)
+            return error_response(
+                412, "PRECONDITION_FAILED", "策略已变化，请重新打开编辑；本次未保存", request.state.trace_id
+            )
         except AlertRuleConflict:
-            return error_response(409, "ALERT_RULE_CONFLICT", "名称重复、标的或通知通道不可用", request.state.trace_id)
+            return error_response(
+                409, "ALERT_RULE_CONFLICT", "名称重复、标的或通知通道不可用", request.state.trace_id
+            )
         return alert_rule_result(item, request, response)
 
     @app.delete("/api/v2/alert-rules/{rule_id}", response_model=None)
-    def delete_alert_rule(rule_id: UUID, request: Request,
-                          if_match: Annotated[str, Header(alias="If-Match")]) -> Any:
+    def delete_alert_rule(
+        rule_id: UUID, request: Request, if_match: Annotated[str, Header(alias="If-Match")]
+    ) -> Any:
         denied = _require_alert_write(request)
         if denied is not None:
             return denied
@@ -1590,7 +1766,9 @@ def create_formal_app() -> FastAPI:
         except AlertRuleNotFound:
             return error_response(404, "ALERT_RULE_NOT_FOUND", "策略不存在或已删除", request.state.trace_id)
         except AlertRulePreconditionFailed:
-            return error_response(412, "PRECONDITION_FAILED", "策略已变化，请刷新后确认删除", request.state.trace_id)
+            return error_response(
+                412, "PRECONDITION_FAILED", "策略已变化，请刷新后确认删除", request.state.trace_id
+            )
         return {"deleted": True, "history_preserved": True, "trace_id": request.state.trace_id}
 
     @app.post("/api/v2/alert-rules/{rule_id}/versions", status_code=201, response_model=None)
@@ -1607,7 +1785,9 @@ def create_formal_app() -> FastAPI:
         session = request.state.auth_session
         try:
             item = alert_rules.add_version(
-                session.tenant_id, session.user_id, rule_id,
+                session.tenant_id,
+                session.user_id,
+                rule_id,
                 condition=payload.condition.model_dump(mode="json"),
                 routing=payload.routing.model_dump(mode="json"),
                 expected_etag=_etag(if_match),
@@ -1635,7 +1815,10 @@ def create_formal_app() -> FastAPI:
         session = request.state.auth_session
         try:
             item = alert_rules.pause(
-                session.tenant_id, session.user_id, rule_id, expected_etag=_etag(if_match),
+                session.tenant_id,
+                session.user_id,
+                rule_id,
+                expected_etag=_etag(if_match),
             )
         except ValueError:
             return error_response(422, "INVALID_ETAG", "If-Match 无效", request.state.trace_id)
@@ -1644,7 +1827,9 @@ def create_formal_app() -> FastAPI:
         except AlertRulePreconditionFailed:
             return error_response(412, "PRECONDITION_FAILED", "告警规则版本已变化", request.state.trace_id)
         except AlertRuleConflict:
-            return error_response(409, "ALERT_RULE_NOT_ACTIVE", "告警规则当前不可暂停", request.state.trace_id)
+            return error_response(
+                409, "ALERT_RULE_NOT_ACTIVE", "告警规则当前不可暂停", request.state.trace_id
+            )
         return alert_rule_result(item, request, response)
 
     @app.post("/api/v2/alert-rules/{rule_id}/resume", response_model=None)
@@ -1660,7 +1845,10 @@ def create_formal_app() -> FastAPI:
         session = request.state.auth_session
         try:
             item = alert_rules.resume(
-                session.tenant_id, session.user_id, rule_id, expected_etag=_etag(if_match),
+                session.tenant_id,
+                session.user_id,
+                rule_id,
+                expected_etag=_etag(if_match),
             )
         except ValueError:
             return error_response(422, "INVALID_ETAG", "If-Match 无效", request.state.trace_id)
@@ -1669,7 +1857,9 @@ def create_formal_app() -> FastAPI:
         except AlertRulePreconditionFailed:
             return error_response(412, "PRECONDITION_FAILED", "告警规则版本已变化", request.state.trace_id)
         except AlertRuleConflict:
-            return error_response(409, "ALERT_RULE_NOT_PAUSED", "告警规则当前不可恢复，请检查状态与标的", request.state.trace_id)
+            return error_response(
+                409, "ALERT_RULE_NOT_PAUSED", "告警规则当前不可恢复，请检查状态与标的", request.state.trace_id
+            )
         return alert_rule_result(item, request, response)
 
     @app.get("/api/v2/telegram/bot-config", response_model=None)
@@ -1699,8 +1889,10 @@ def create_formal_app() -> FastAPI:
             return denied
         if telegram_config_encryptor is None:
             return error_response(
-                503, "TELEGRAM_SECRET_STORAGE_UNAVAILABLE",
-                "Telegram 加密存储尚未由管理员初始化", request.state.trace_id,
+                503,
+                "TELEGRAM_SECRET_STORAGE_UNAVAILABLE",
+                "Telegram 加密存储尚未由管理员初始化",
+                request.state.trace_id,
             )
         session = request.state.auth_session
         resolved = _resolve_sensitive_submission(
@@ -1729,7 +1921,10 @@ def create_formal_app() -> FastAPI:
         allowed, retry_after = provider_limiter.allow(f"telegram-config:{session.tenant_id}", 3, 60)
         if not allowed:
             return error_response(
-                429, "RATE_LIMITED", "Telegram 配置检测过于频繁", request.state.trace_id,
+                429,
+                "RATE_LIMITED",
+                "Telegram 配置检测过于频繁",
+                request.state.trace_id,
                 **{"Retry-After": str(retry_after)},
             )
         try:
@@ -1787,7 +1982,9 @@ def create_formal_app() -> FastAPI:
         except FormalInvalidCredentials:
             return error_response(401, "INVALID_MFA_CODE", "验证码无效或已使用", request.state.trace_id)
         except TelegramConfigNotFound:
-            return error_response(404, "TELEGRAM_CONFIG_NOT_FOUND", "Telegram 配置不存在", request.state.trace_id)
+            return error_response(
+                404, "TELEGRAM_CONFIG_NOT_FOUND", "Telegram 配置不存在", request.state.trace_id
+            )
         return {"disabled": True, "trace_id": request.state.trace_id}
 
     @app.get("/api/v2/telegram/connections")
@@ -1864,8 +2061,8 @@ def create_formal_app() -> FastAPI:
             allowed_users = telegram_allowed_users
             expected_tenant_id = None
         try:
-            raw_update=await request.json()
-            callback=callback_update(raw_update)
+            raw_update = await request.json()
+            callback = callback_update(raw_update)
             update = callback[:5] if callback else _telegram_message_update(raw_update)
         except (TypeError, ValueError):
             return {"ok": True}
@@ -1894,25 +2091,33 @@ def create_formal_app() -> FastAPI:
             else:
                 message = "绑定链接无效或已过期，请回到 GateScope 网页重新生成。"
             return {
-                "method": "sendMessage", "chat_id": telegram_chat_id,
-                "text": message, "protect_content": True,
+                "method": "sendMessage",
+                "chat_id": telegram_chat_id,
+                "text": message,
+                "protect_content": True,
             }
         principal = notifications.resolve_active_telegram_principal(
-            telegram_user_id, telegram_chat_id,
+            telegram_user_id,
+            telegram_chat_id,
         )
         if principal is None or (
             expected_tenant_id is not None and principal.tenant_id != expected_tenant_id
         ):
             if callback:
-                return {'method':'answerCallbackQuery','callback_query_id':callback[5],
-                        'text':'当前私聊尚未有效绑定，请在网页完成绑定。','cache_time':0}
+                return {
+                    "method": "answerCallbackQuery",
+                    "callback_query_id": callback[5],
+                    "text": "当前私聊尚未有效绑定，请在网页完成绑定。",
+                    "cache_time": 0,
+                }
             # Keep the legacy allowlist only as an optional response allowlist for
             # unsolicited, unbound commands.  It is not an authorization boundary
             # for authenticated self-service links or verified connections.
             if telegram_user_id not in allowed_users:
                 return {"ok": True}
             return {
-                "method": "sendMessage", "chat_id": telegram_chat_id,
+                "method": "sendMessage",
+                "chat_id": telegram_chat_id,
                 "text": "这个私聊尚未完成安全绑定。请先在 GateScope 网页生成绑定链接。",
                 "protect_content": True,
             }
@@ -1920,18 +2125,44 @@ def create_formal_app() -> FastAPI:
         # webhook immediately acknowledges callbacks; image work runs off-thread
         # in the existing notification worker, not in an HTTP request.
         try:
-            command=None if callback else market_command(text)
+            command = None if callback else market_command(text)
         except ValueError as exc:
-            return {'method':'sendMessage','chat_id':telegram_chat_id,'text':str(exc),'protect_content':True}
+            return {
+                "method": "sendMessage",
+                "chat_id": telegram_chat_id,
+                "text": str(exc),
+                "protect_content": True,
+            }
         if callback or command:
-            state=telegram_market.enqueue(principal,update_id,telegram_chat_id,command, text if callback else None)
-            feedback={'QUEUED':'正在读取后台数据…','DUPLICATE':'已收到，请稍候。','EXPIRED':'菜单已过期，请发送 /watchlist。',
-                'UNBOUND':'绑定已失效，请在网页重新绑定。','RATE_LIMITED':'查询较频繁，请稍后再试。'}[state]
-            if callback:return {'method':'answerCallbackQuery','callback_query_id':callback[5],'text':feedback,'cache_time':0}
-            if state=='DUPLICATE':return {'ok':True}
-            return {'method':'sendMessage','chat_id':telegram_chat_id,'text':feedback,'protect_content':True}
+            state = telegram_market.enqueue(
+                principal, update_id, telegram_chat_id, command, text if callback else None
+            )
+            feedback = {
+                "QUEUED": "正在读取后台数据…",
+                "DUPLICATE": "已收到，请稍候。",
+                "EXPIRED": "菜单已过期，请发送 /watchlist。",
+                "UNBOUND": "绑定已失效，请在网页重新绑定。",
+                "RATE_LIMITED": "查询较频繁，请稍后再试。",
+            }[state]
+            if callback:
+                return {
+                    "method": "answerCallbackQuery",
+                    "callback_query_id": callback[5],
+                    "text": feedback,
+                    "cache_time": 0,
+                }
+            if state == "DUPLICATE":
+                return {"ok": True}
+            return {
+                "method": "sendMessage",
+                "chat_id": telegram_chat_id,
+                "text": feedback,
+                "protect_content": True,
+            }
         if not notifications.accept_command_update(
-            principal, update_id=update_id, command_text=text,
+            principal,
+            update_id=update_id,
+            command_text=text,
         ):
             return {"ok": True}
         try:
@@ -1946,8 +2177,10 @@ def create_formal_app() -> FastAPI:
         except (PaperConflict, ValueError):
             message = "暂时无法刷新这笔 PAPER 交易，请稍后重试；历史记录没有被改写。"
         return {
-            "method": "sendMessage", "chat_id": telegram_chat_id,
-            "text": message, "protect_content": True,
+            "method": "sendMessage",
+            "chat_id": telegram_chat_id,
+            "text": message,
+            "protect_content": True,
         }
 
     @app.post("/api/v2/telegram/connections/{connection_id}:confirm", response_model=None)
@@ -1963,10 +2196,14 @@ def create_formal_app() -> FastAPI:
             return error_response(401, "INVALID_MFA_CODE", "验证码无效或已使用", request.state.trace_id)
         try:
             connection = notifications.confirm_connection(
-                session.tenant_id, session.user_id, connection_id,
+                session.tenant_id,
+                session.user_id,
+                connection_id,
             )
         except NotificationNotFound:
-            return error_response(404, "TELEGRAM_CONNECTION_NOT_FOUND", "待确认绑定不存在", request.state.trace_id)
+            return error_response(
+                404, "TELEGRAM_CONNECTION_NOT_FOUND", "待确认绑定不存在", request.state.trace_id
+            )
         return {**_telegram_connection_payload(connection), "trace_id": request.state.trace_id}
 
     @app.get("/api/v2/notification-channels")
@@ -1984,7 +2221,9 @@ def create_formal_app() -> FastAPI:
 
     @app.post("/api/v2/notification-channels", status_code=201, response_model=None)
     def create_notification_channel(
-        payload: NotificationChannelRequest, request: Request, response: Response,
+        payload: NotificationChannelRequest,
+        request: Request,
+        response: Response,
     ) -> Any:
         session = request.state.auth_session
         try:
@@ -1996,7 +2235,9 @@ def create_formal_app() -> FastAPI:
             )
         except (NotificationConflict, ValueError):
             return error_response(
-                409, "NOTIFICATION_CHANNEL_CONFLICT", "通道名称冲突或 Telegram 绑定未激活",
+                409,
+                "NOTIFICATION_CHANNEL_CONFLICT",
+                "通道名称冲突或 Telegram 绑定未激活",
                 request.state.trace_id,
             )
         response.headers["ETag"] = f'"{channel.etag}"'
@@ -2005,13 +2246,17 @@ def create_formal_app() -> FastAPI:
 
     @app.get("/api/v2/notification-channels/{channel_id}", response_model=None)
     def get_notification_channel(
-        channel_id: UUID, request: Request, response: Response,
+        channel_id: UUID,
+        request: Request,
+        response: Response,
     ) -> Any:
         session = request.state.auth_session
         try:
             channel = notifications.get_channel(session.tenant_id, session.user_id, channel_id)
         except NotificationNotFound:
-            return error_response(404, "NOTIFICATION_CHANNEL_NOT_FOUND", "通知通道不存在", request.state.trace_id)
+            return error_response(
+                404, "NOTIFICATION_CHANNEL_NOT_FOUND", "通知通道不存在", request.state.trace_id
+            )
         response.headers["ETag"] = f'"{channel.etag}"'
         return {**_notification_channel_payload(channel), "trace_id": request.state.trace_id}
 
@@ -2021,7 +2266,9 @@ def create_formal_app() -> FastAPI:
         try:
             operation_id = notifications.enqueue_test(session.tenant_id, session.user_id, channel_id)
         except NotificationNotFound:
-            return error_response(404, "NOTIFICATION_CHANNEL_NOT_FOUND", "通知通道不存在", request.state.trace_id)
+            return error_response(
+                404, "NOTIFICATION_CHANNEL_NOT_FOUND", "通知通道不存在", request.state.trace_id
+            )
         response.headers["Location"] = f"/api/v2/operations/{operation_id}"
         return {
             "operation_id": str(operation_id),
@@ -2035,7 +2282,9 @@ def create_formal_app() -> FastAPI:
         try:
             notifications.revoke_channel(session.tenant_id, session.user_id, channel_id)
         except NotificationNotFound:
-            return error_response(404, "NOTIFICATION_CHANNEL_NOT_FOUND", "通知通道不存在", request.state.trace_id)
+            return error_response(
+                404, "NOTIFICATION_CHANNEL_NOT_FOUND", "通知通道不存在", request.state.trace_id
+            )
         return {"revoked": True, "trace_id": request.state.trace_id}
 
     @app.get("/api/v2/notification-routes")
@@ -2052,12 +2301,19 @@ def create_formal_app() -> FastAPI:
         }
 
     @app.get("/api/v2/notifications")
-    def notification_events(request: Request, limit: int = Query(default=50, ge=1, le=200),
-                            offset: int = Query(default=0, ge=0, le=1_000_000),
-                            status: str = Query(default="", pattern=r"^(|PENDING|SENDING|RETRY|SENT|FAILED|DEAD_LETTER)$")) -> dict[str, Any]:
+    def notification_events(
+        request: Request,
+        limit: int = Query(default=50, ge=1, le=200),
+        offset: int = Query(default=0, ge=0, le=1_000_000),
+        status: str = Query(default="", pattern=r"^(|PENDING|SENDING|RETRY|SENT|FAILED|DEAD_LETTER)$"),
+    ) -> dict[str, Any]:
         session = request.state.auth_session
         items = notifications.list_notification_events(
-            session.tenant_id, session.user_id, limit=limit + 1, offset=offset, status=status,
+            session.tenant_id,
+            session.user_id,
+            limit=limit + 1,
+            offset=offset,
+            status=status,
         )
         total, attention = notifications.notification_counts(session.tenant_id, session.user_id, status)
         return {
@@ -2072,7 +2328,9 @@ def create_formal_app() -> FastAPI:
 
     @app.post("/api/v2/notification-routes", status_code=201, response_model=None)
     def create_notification_route(
-        payload: NotificationRouteRequest, request: Request, response: Response,
+        payload: NotificationRouteRequest,
+        request: Request,
+        response: Response,
     ) -> Any:
         session = request.state.auth_session
         try:
@@ -2084,7 +2342,9 @@ def create_formal_app() -> FastAPI:
             )
         except (NotificationConflict, ValueError):
             return error_response(
-                409, "NOTIFICATION_ROUTE_CONFLICT", "路由名称冲突或通知通道不可用",
+                409,
+                "NOTIFICATION_ROUTE_CONFLICT",
+                "路由名称冲突或通知通道不可用",
                 request.state.trace_id,
             )
         response.headers["ETag"] = f'"{route.etag}"'
@@ -2097,7 +2357,9 @@ def create_formal_app() -> FastAPI:
         try:
             route = notifications.get_route(session.tenant_id, session.user_id, route_id)
         except NotificationNotFound:
-            return error_response(404, "NOTIFICATION_ROUTE_NOT_FOUND", "通知路由不存在", request.state.trace_id)
+            return error_response(
+                404, "NOTIFICATION_ROUTE_NOT_FOUND", "通知路由不存在", request.state.trace_id
+            )
         response.headers["ETag"] = f'"{route.etag}"'
         return {**_notification_route_payload(route), "trace_id": request.state.trace_id}
 
@@ -2122,12 +2384,16 @@ def create_formal_app() -> FastAPI:
         except ValueError:
             return error_response(422, "INVALID_ETAG", "If-Match 无效", request.state.trace_id)
         except NotificationNotFound:
-            return error_response(404, "NOTIFICATION_ROUTE_NOT_FOUND", "通知路由不存在", request.state.trace_id)
+            return error_response(
+                404, "NOTIFICATION_ROUTE_NOT_FOUND", "通知路由不存在", request.state.trace_id
+            )
         except NotificationPreconditionFailed:
             return error_response(412, "PRECONDITION_FAILED", "通知路由版本已变化", request.state.trace_id)
         except NotificationConflict:
             return error_response(
-                409, "NOTIFICATION_ROUTE_CONFLICT", "路由名称冲突或通知通道不可用",
+                409,
+                "NOTIFICATION_ROUTE_CONFLICT",
+                "路由名称冲突或通知通道不可用",
                 request.state.trace_id,
             )
         response.headers["ETag"] = f'"{route.etag}"'
@@ -2139,7 +2405,9 @@ def create_formal_app() -> FastAPI:
         try:
             notifications.delete_route(session.tenant_id, session.user_id, route_id)
         except NotificationNotFound:
-            return error_response(404, "NOTIFICATION_ROUTE_NOT_FOUND", "通知路由不存在", request.state.trace_id)
+            return error_response(
+                404, "NOTIFICATION_ROUTE_NOT_FOUND", "通知路由不存在", request.state.trace_id
+            )
         return {"deleted": True, "trace_id": request.state.trace_id}
 
     @app.get("/api/v2/exchange-accounts", response_model=None)
@@ -2191,7 +2459,10 @@ def create_formal_app() -> FastAPI:
         allowed, retry_after = credential_limiter.allow(f"credential:{session.session_id}", 10, 600)
         if not allowed:
             return error_response(
-                429, "CREDENTIAL_RATE_LIMITED", "凭据操作过于频繁", request.state.trace_id,
+                429,
+                "CREDENTIAL_RATE_LIMITED",
+                "凭据操作过于频繁",
+                request.state.trace_id,
                 **{"Retry-After": str(retry_after)},
             )
         try:
@@ -2205,11 +2476,17 @@ def create_formal_app() -> FastAPI:
             )
         except ExchangeAccountConflict:
             return error_response(
-                409, "EXCHANGE_ACCOUNT_CONFLICT", "账户别名或凭据已存在", request.state.trace_id,
+                409,
+                "EXCHANGE_ACCOUNT_CONFLICT",
+                "账户别名或凭据已存在",
+                request.state.trace_id,
             )
         except ValueError:
             return error_response(
-                422, "CREDENTIAL_ADMISSION_REJECTED", "交易所凭据不符合接入策略", request.state.trace_id,
+                422,
+                "CREDENTIAL_ADMISSION_REJECTED",
+                "交易所凭据不符合接入策略",
+                request.state.trace_id,
             )
         response.headers["Location"] = f"/api/v2/exchange-accounts/{account.id}"
         response.headers["ETag"] = f'"{account.etag}"'
@@ -2231,12 +2508,17 @@ def create_formal_app() -> FastAPI:
             account = exchange_accounts.get_account(session.tenant_id, session.user_id, account_id)
         except ExchangeAccountNotFound:
             return error_response(
-                404, "EXCHANGE_ACCOUNT_NOT_FOUND", "交易所账户不存在", request.state.trace_id,
+                404,
+                "EXCHANGE_ACCOUNT_NOT_FOUND",
+                "交易所账户不存在",
+                request.state.trace_id,
             )
         response.headers["ETag"] = f'"{account.etag}"'
         return {**_exchange_account_payload(account), "trace_id": request.state.trace_id}
 
-    @app.post("/api/v2/exchange-accounts/{account_id}/credentials:rotate", status_code=202, response_model=None)
+    @app.post(
+        "/api/v2/exchange-accounts/{account_id}/credentials:rotate", status_code=202, response_model=None
+    )
     def rotate_exchange_credential(
         account_id: UUID,
         payload: ExchangeCredentialRotateSubmission,
@@ -2259,9 +2541,7 @@ def create_formal_app() -> FastAPI:
             payload,
             request,
             decryptor=submission_decryptor,
-            expected_purpose=(
-                f"tenant:{session.tenant_id}:exchange_credential_rotate:{account_id}"
-            ),
+            expected_purpose=(f"tenant:{session.tenant_id}:exchange_credential_rotate:{account_id}"),
             model_type=ExchangeCredentialRotateRequest,
         )
         if isinstance(resolved, JSONResponse):
@@ -2269,7 +2549,10 @@ def create_formal_app() -> FastAPI:
         allowed, retry_after = credential_limiter.allow(f"credential:{session.session_id}", 10, 600)
         if not allowed:
             return error_response(
-                429, "CREDENTIAL_RATE_LIMITED", "凭据操作过于频繁", request.state.trace_id,
+                429,
+                "CREDENTIAL_RATE_LIMITED",
+                "凭据操作过于频繁",
+                request.state.trace_id,
                 **{"Retry-After": str(retry_after)},
             )
         try:
@@ -2287,11 +2570,17 @@ def create_formal_app() -> FastAPI:
             return error_response(422, "INVALID_ETAG", "请求或 If-Match 无效", request.state.trace_id)
         except ExchangeAccountNotFound:
             return error_response(
-                404, "EXCHANGE_ACCOUNT_NOT_FOUND", "交易所账户不存在", request.state.trace_id,
+                404,
+                "EXCHANGE_ACCOUNT_NOT_FOUND",
+                "交易所账户不存在",
+                request.state.trace_id,
             )
         except ExchangeAccountConflict:
             return error_response(
-                409, "EXCHANGE_ACCOUNT_CONFLICT", "账户版本已变化、已停用或正在验证", request.state.trace_id,
+                409,
+                "EXCHANGE_ACCOUNT_CONFLICT",
+                "账户版本已变化、已停用或正在验证",
+                request.state.trace_id,
             )
         response.headers["ETag"] = f'"{account.etag}"'
         return {
@@ -2323,11 +2612,17 @@ def create_formal_app() -> FastAPI:
             return error_response(422, "INVALID_ETAG", "If-Match 无效", request.state.trace_id)
         except ExchangeAccountNotFound:
             return error_response(
-                404, "EXCHANGE_ACCOUNT_NOT_FOUND", "交易所账户不存在", request.state.trace_id,
+                404,
+                "EXCHANGE_ACCOUNT_NOT_FOUND",
+                "交易所账户不存在",
+                request.state.trace_id,
             )
         except ExchangeAccountConflict:
             return error_response(
-                409, "EXCHANGE_ACCOUNT_CONFLICT", "账户版本已变化、已停用或正在验证", request.state.trace_id,
+                409,
+                "EXCHANGE_ACCOUNT_CONFLICT",
+                "账户版本已变化、已停用或正在验证",
+                request.state.trace_id,
             )
         response.headers["ETag"] = f'"{account.etag}"'
         return {
@@ -2358,11 +2653,17 @@ def create_formal_app() -> FastAPI:
             return error_response(422, "INVALID_ETAG", "If-Match 无效", request.state.trace_id)
         except ExchangeAccountNotFound:
             return error_response(
-                404, "EXCHANGE_ACCOUNT_NOT_FOUND", "交易所账户不存在", request.state.trace_id,
+                404,
+                "EXCHANGE_ACCOUNT_NOT_FOUND",
+                "交易所账户不存在",
+                request.state.trace_id,
             )
         except ExchangeAccountConflict:
             return error_response(
-                409, "EXCHANGE_ACCOUNT_CONFLICT", "账户版本已变化或已经停用", request.state.trace_id,
+                409,
+                "EXCHANGE_ACCOUNT_CONFLICT",
+                "账户版本已变化或已经停用",
+                request.state.trace_id,
             )
         response.headers["ETag"] = f'"{account.etag}"'
         return {
@@ -2399,9 +2700,13 @@ def create_formal_app() -> FastAPI:
                 exclusive_account_attested=payload.acknowledge_exclusive_account,
             )
         except ValueError:
-            return error_response(422, "TESTNET_ARMING_REJECTED", "TESTNET 安全确认不完整", request.state.trace_id)
+            return error_response(
+                422, "TESTNET_ARMING_REJECTED", "TESTNET 安全确认不完整", request.state.trace_id
+            )
         except ExchangeAccountNotFound:
-            return error_response(404, "EXCHANGE_ACCOUNT_NOT_FOUND", "交易所账户不存在", request.state.trace_id)
+            return error_response(
+                404, "EXCHANGE_ACCOUNT_NOT_FOUND", "交易所账户不存在", request.state.trace_id
+            )
         except ExchangeAccountConflict:
             return error_response(
                 409,
@@ -2433,10 +2738,15 @@ def create_formal_app() -> FastAPI:
         except ValueError:
             return error_response(422, "INVALID_ETAG", "If-Match 无效", request.state.trace_id)
         except ExchangeAccountNotFound:
-            return error_response(404, "EXCHANGE_ACCOUNT_NOT_FOUND", "交易所账户不存在", request.state.trace_id)
+            return error_response(
+                404, "EXCHANGE_ACCOUNT_NOT_FOUND", "交易所账户不存在", request.state.trace_id
+            )
         except ExchangeAccountConflict:
             return error_response(
-                409, "TESTNET_DISARM_CONFLICT", "账户正在执行或版本已变化", request.state.trace_id,
+                409,
+                "TESTNET_DISARM_CONFLICT",
+                "账户正在执行或版本已变化",
+                request.state.trace_id,
             )
         response.headers["ETag"] = f'"{account.etag}"'
         return {**_exchange_account_payload(account), "trace_id": request.state.trace_id}
@@ -2451,7 +2761,9 @@ def create_formal_app() -> FastAPI:
             "items": [
                 _testnet_drill_payload(item)
                 for item in testnet_execution.list_drills(
-                    session.tenant_id, session.user_id, limit=limit,
+                    session.tenant_id,
+                    session.user_id,
+                    limit=limit,
                 )
             ],
             "live_trading_enabled": False,
@@ -2468,7 +2780,8 @@ def create_formal_app() -> FastAPI:
             "items": [
                 _execution_certification_payload(item)
                 for item in testnet_execution.list_certifications(
-                    session.tenant_id, session.user_id,
+                    session.tenant_id,
+                    session.user_id,
                 )
             ],
             "required_evidence_tier": "LIVE_ELIGIBLE",
@@ -2509,7 +2822,9 @@ def create_formal_app() -> FastAPI:
                 request.state.trace_id,
             )
         except ValueError:
-            return error_response(422, "TESTNET_DRILL_INVALID", "TESTNET 演练请求无效", request.state.trace_id)
+            return error_response(
+                422, "TESTNET_DRILL_INVALID", "TESTNET 演练请求无效", request.state.trace_id
+            )
         response.headers["Location"] = f"/api/v2/testnet-drills/{drill.public_drill_id}"
         response.headers["ETag"] = f'"{drill.version}"'
         return {**_testnet_drill_payload(drill), "trace_id": request.state.trace_id}
@@ -2522,10 +2837,14 @@ def create_formal_app() -> FastAPI:
         session = request.state.auth_session
         try:
             drill = testnet_execution.get_drill(
-                session.tenant_id, session.user_id, public_drill_id,
+                session.tenant_id,
+                session.user_id,
+                public_drill_id,
             )
         except TestnetDrillNotFound:
-            return error_response(404, "TESTNET_DRILL_NOT_FOUND", "TESTNET 演练不存在", request.state.trace_id)
+            return error_response(
+                404, "TESTNET_DRILL_NOT_FOUND", "TESTNET 演练不存在", request.state.trace_id
+            )
         response.headers["ETag"] = f'"{drill.version}"'
         return {**_testnet_drill_payload(drill), "trace_id": request.state.trace_id}
 
@@ -2537,10 +2856,14 @@ def create_formal_app() -> FastAPI:
         session = request.state.auth_session
         try:
             items = testnet_execution.timeline(
-                session.tenant_id, session.user_id, public_drill_id,
+                session.tenant_id,
+                session.user_id,
+                public_drill_id,
             )
         except TestnetDrillNotFound:
-            return error_response(404, "TESTNET_DRILL_NOT_FOUND", "TESTNET 演练不存在", request.state.trace_id)
+            return error_response(
+                404, "TESTNET_DRILL_NOT_FOUND", "TESTNET 演练不存在", request.state.trace_id
+            )
         return {"items": items, "trace_id": request.state.trace_id}
 
     @app.get("/api/v2/mcp/clients", response_model=None)
@@ -2566,7 +2889,9 @@ def create_formal_app() -> FastAPI:
 
     @app.post("/api/v2/mcp/clients", status_code=201, response_model=None)
     def create_mcp_client(
-        payload: McpClientCreateRequest, request: Request, response: Response,
+        payload: McpClientCreateRequest,
+        request: Request,
+        response: Response,
     ) -> Any:
         denied = _require_credential_write(request)
         if denied is not None:
@@ -2582,7 +2907,10 @@ def create_formal_app() -> FastAPI:
 
     @app.post("/api/v2/mcp/clients/{client_id}:revoke", response_model=None)
     def revoke_mcp_client(
-        client_id: UUID, payload: MfaCodeRequest, request: Request, response: Response,
+        client_id: UUID,
+        payload: MfaCodeRequest,
+        request: Request,
+        response: Response,
     ) -> Any:
         denied = _require_credential_write(request)
         if denied is not None:
@@ -2603,7 +2931,10 @@ def create_formal_app() -> FastAPI:
 
     @app.post("/api/v2/mcp/clients/{client_id}/tokens", status_code=201, response_model=None)
     def create_mcp_token(
-        client_id: UUID, payload: McpTokenCreateRequest, request: Request, response: Response,
+        client_id: UUID,
+        payload: McpTokenCreateRequest,
+        request: Request,
+        response: Response,
     ) -> Any:
         denied = _require_credential_write(request)
         if denied is not None:
@@ -2623,7 +2954,9 @@ def create_formal_app() -> FastAPI:
                 ttl=timedelta(hours=payload.ttl_hours),
             )
         except McpNotFound:
-            return error_response(404, "MCP_CLIENT_NOT_FOUND", "有效 MCP 客户端不存在", request.state.trace_id)
+            return error_response(
+                404, "MCP_CLIENT_NOT_FOUND", "有效 MCP 客户端不存在", request.state.trace_id
+            )
         except ValueError:
             return error_response(422, "INVALID_MCP_TOKEN_POLICY", "MCP 令牌策略无效", request.state.trace_id)
         response.headers["Cache-Control"] = "no-store"
@@ -2677,7 +3010,9 @@ def create_formal_app() -> FastAPI:
 
     @app.post("/api/v2/paper-accounts", status_code=201, response_model=None)
     def create_paper_account(
-        payload: PaperAccountCreateRequest, request: Request, response: Response,
+        payload: PaperAccountCreateRequest,
+        request: Request,
+        response: Response,
     ) -> Any:
         denied = _require_action(request, Action.PROPOSAL_CREATE, "当前角色不能创建模拟账户")
         if denied is not None:
@@ -2746,7 +3081,9 @@ def create_formal_app() -> FastAPI:
 
     @app.post("/api/v2/signals/{signal_id}/execution-decisions", status_code=201, response_model=None)
     def create_execution_decision(
-        signal_id: UUID, payload: ExecutionDecisionCreateRequest, request: Request,
+        signal_id: UUID,
+        payload: ExecutionDecisionCreateRequest,
+        request: Request,
     ) -> Any:
         denied = _require_action(request, Action.PROPOSAL_CREATE, "当前角色不能创建模拟执行决定")
         if denied is not None:
@@ -2761,11 +3098,17 @@ def create_formal_app() -> FastAPI:
                 client_request_id=payload.client_request_id,
             )
         except PaperNotFound:
-            return error_response(404, "PAPER_INPUT_NOT_FOUND", "信号或模拟账户不存在", request.state.trace_id)
+            return error_response(
+                404, "PAPER_INPUT_NOT_FOUND", "信号或模拟账户不存在", request.state.trace_id
+            )
         except PaperConflict:
-            return error_response(409, "IDEMPOTENCY_CONFLICT", "请求标识已用于不同输入", request.state.trace_id)
+            return error_response(
+                409, "IDEMPOTENCY_CONFLICT", "请求标识已用于不同输入", request.state.trace_id
+            )
         except ValueError:
-            return error_response(422, "INVALID_EXECUTION_DECISION", "模拟执行决定参数无效", request.state.trace_id)
+            return error_response(
+                422, "INVALID_EXECUTION_DECISION", "模拟执行决定参数无效", request.state.trace_id
+            )
         return {**_execution_decision_payload(item), "trace_id": request.state.trace_id}
 
     @app.get("/api/v2/execution-decisions/{decision_id}", response_model=None)
@@ -2774,7 +3117,9 @@ def create_formal_app() -> FastAPI:
         try:
             item = paper.get_execution_decision(session.tenant_id, session.user_id, decision_id)
         except PaperNotFound:
-            return error_response(404, "EXECUTION_DECISION_NOT_FOUND", "执行决定不存在", request.state.trace_id)
+            return error_response(
+                404, "EXECUTION_DECISION_NOT_FOUND", "执行决定不存在", request.state.trace_id
+            )
         return {**_execution_decision_payload(item), "trace_id": request.state.trace_id}
 
     @app.get("/api/v2/proposals", response_model=None)
@@ -2804,9 +3149,13 @@ def create_formal_app() -> FastAPI:
                 client_request_id=payload.client_request_id,
             )
         except PaperNotFound:
-            return error_response(404, "EXECUTION_DECISION_NOT_FOUND", "执行决定不存在", request.state.trace_id)
+            return error_response(
+                404, "EXECUTION_DECISION_NOT_FOUND", "执行决定不存在", request.state.trace_id
+            )
         except PaperConflict:
-            return error_response(409, "PROPOSAL_CONFLICT", "执行决定不可提案或请求已存在", request.state.trace_id)
+            return error_response(
+                409, "PROPOSAL_CONFLICT", "执行决定不可提案或请求已存在", request.state.trace_id
+            )
         except ValueError:
             return error_response(422, "INVALID_PROPOSAL_REQUEST", "提案请求无效", request.state.trace_id)
         response.headers["ETag"] = f'"{item.version}"'
@@ -2825,7 +3174,10 @@ def create_formal_app() -> FastAPI:
 
     @app.post("/api/v2/proposals/{proposal_id}/cancel", response_model=None)
     def cancel_proposal(
-        proposal_id: UUID, payload: ProposalCancelRequest, request: Request, response: Response,
+        proposal_id: UUID,
+        payload: ProposalCancelRequest,
+        request: Request,
+        response: Response,
     ) -> Any:
         denied = _require_action(request, Action.PROPOSAL_CREATE, "当前角色不能取消模拟提案")
         if denied is not None:
@@ -2844,7 +3196,9 @@ def create_formal_app() -> FastAPI:
         except PaperPreconditionFailed:
             return error_response(412, "PROPOSAL_VERSION_CHANGED", "提案版本已变化", request.state.trace_id)
         except PaperConflict:
-            return error_response(409, "PROPOSAL_ALREADY_DECIDED", "提案已处理，不能取消", request.state.trace_id)
+            return error_response(
+                409, "PROPOSAL_ALREADY_DECIDED", "提案已处理，不能取消", request.state.trace_id
+            )
         response.headers["ETag"] = f'"{item.version}"'
         return {**_proposal_payload(item), "trace_id": request.state.trace_id}
 
@@ -2873,7 +3227,9 @@ def create_formal_app() -> FastAPI:
         except PaperPreconditionFailed:
             return error_response(412, "PROPOSAL_VERSION_CHANGED", "提案版本已变化", request.state.trace_id)
         except PaperConflict:
-            return error_response(409, "PROPOSAL_ALREADY_DECIDED", "提案已处理或幂等键冲突", request.state.trace_id)
+            return error_response(
+                409, "PROPOSAL_ALREADY_DECIDED", "提案已处理或幂等键冲突", request.state.trace_id
+            )
         except ValueError:
             return error_response(422, "INVALID_IDEMPOTENCY_KEY", "幂等键无效", request.state.trace_id)
         return {**_approval_payload(result), "trace_id": request.state.trace_id}
@@ -2929,7 +3285,9 @@ def create_formal_app() -> FastAPI:
         except PaperNotFound:
             return error_response(404, "TRADE_NOT_FOUND", "交易事件不存在", request.state.trace_id)
         except PaperConflict:
-            return error_response(409, "PAPER_RECONCILE_CONFLICT", "模拟交易状态无法推进", request.state.trace_id)
+            return error_response(
+                409, "PAPER_RECONCILE_CONFLICT", "模拟交易状态无法推进", request.state.trace_id
+            )
         return {**_trade_payload(item), "trace_id": request.state.trace_id}
 
     @app.get("/api/v2/operations/{operation_id}", response_model=None)
@@ -2937,7 +3295,9 @@ def create_formal_app() -> FastAPI:
         session = request.state.auth_session
         try:
             operation = notifications.get_operation(
-                session.tenant_id, session.user_id, operation_id,
+                session.tenant_id,
+                session.user_id,
+                operation_id,
             )
         except NotificationNotFound:
             return error_response(404, "OPERATION_NOT_FOUND", "操作不存在或已过期", request.state.trace_id)
@@ -2967,11 +3327,15 @@ def create_formal_app() -> FastAPI:
     # Operator-pinned transport alias only; never derive an OAuth audience from
     # Host/Forwarded, browser query parameters, or dynamic client registration.
     tunnel_resource = os.environ.get("GATESCOPE_MCP_OAUTH_TUNNEL_RESOURCE", "")
-    app.include_router(build_mcp_oauth_router(
-        pool, public_origin=public_origin, cookie_secure=cookie_secure,
-        require_credential_write=_require_credential_write,
-        resource_aliases=(tunnel_resource,) if tunnel_resource else (),
-    ))
+    app.include_router(
+        build_mcp_oauth_router(
+            pool,
+            public_origin=public_origin,
+            cookie_secure=cookie_secure,
+            require_credential_write=_require_credential_write,
+            resource_aliases=(tunnel_resource,) if tunnel_resource else (),
+        )
+    )
     app.include_router(
         build_v2_router(PostgresMarketReadDatabase(pool), identity, cursor_secret=cursor_secret)
     )
@@ -3017,6 +3381,7 @@ def create_formal_app() -> FastAPI:
         "/settings/security": "/settings/account",
         "/admin": "/admin/overview",
     }
+
     def legacy_redirect(destination: str) -> Any:
         def redirect() -> RedirectResponse:
             return RedirectResponse(destination, status_code=308)
@@ -3036,17 +3401,34 @@ def create_formal_app() -> FastAPI:
 
 def _set_auth_cookies(response: JSONResponse, token: str, csrf: str, max_age: int, secure: bool) -> None:
     response.set_cookie(
-        SESSION_COOKIE, token, max_age=max_age, secure=secure, httponly=True, samesite="strict", path="/",
+        SESSION_COOKIE,
+        token,
+        max_age=max_age,
+        secure=secure,
+        httponly=True,
+        samesite="strict",
+        path="/",
     )
     response.set_cookie(
-        CSRF_COOKIE, csrf, max_age=max_age, secure=secure, httponly=False, samesite="strict", path="/",
+        CSRF_COOKIE,
+        csrf,
+        max_age=max_age,
+        secure=secure,
+        httponly=False,
+        samesite="strict",
+        path="/",
     )
 
 
 def _resource_payload(item: VersionedResource) -> dict[str, Any]:
     return {
-        "id": str(item.id), "kind": item.kind, "name": item.name, "spec": item.spec,
-        "etag": item.etag, "created_at": item.created_at, "updated_at": item.updated_at,
+        "id": str(item.id),
+        "kind": item.kind,
+        "name": item.name,
+        "spec": item.spec,
+        "etag": item.etag,
+        "created_at": item.created_at,
+        "updated_at": item.updated_at,
     }
 
 
@@ -3372,8 +3754,12 @@ def _require_user_management(request: Request) -> JSONResponse | None:
     session = request.state.auth_session
     if session.role is not Role.OWNER or not session.fully_authenticated:
         return error_response(403, "FORBIDDEN", "仅工作区管理员可以管理成员", request.state.trace_id)
-    if session.recent_auth_at is None or session.recent_auth_at < datetime.now(timezone.utc) - timedelta(minutes=10):
-        return error_response(403, "RECENT_OWNER_AUTH_REQUIRED", "请确认当前密码后继续管理成员", request.state.trace_id)
+    if session.recent_auth_at is None or session.recent_auth_at < datetime.now(timezone.utc) - timedelta(
+        minutes=10
+    ):
+        return error_response(
+            403, "RECENT_OWNER_AUTH_REQUIRED", "请确认当前密码后继续管理成员", request.state.trace_id
+        )
     return None
 
 
@@ -3381,7 +3767,10 @@ def _require_credential_write(request: Request) -> JSONResponse | None:
     session = request.state.auth_session
     if session.role is not Role.OWNER:
         return error_response(
-            403, "ROLE_FORBIDDEN", "当前角色不能管理敏感接入，需要 OWNER 权限", request.state.trace_id,
+            403,
+            "ROLE_FORBIDDEN",
+            "当前角色不能管理敏感接入，需要 OWNER 权限",
+            request.state.trace_id,
         )
     context = AuthorizationContext(
         tenant_id=session.tenant_id,
@@ -3721,7 +4110,8 @@ def _telegram_command_response(
         event_line = (
             f"最近事件：#{last_event['sequence']} {last_event['event_type']} · "
             f"{last_event['occurred_at'].isoformat()}"
-            if last_event is not None else "最近事件：尚无可见事件"
+            if last_event is not None
+            else "最近事件：尚无可见事件"
         )
         safety = drill.safe_code or "保护监控正常/尚未产生安全码"
         next_check = drill.next_reconcile_at.isoformat() if drill.next_reconcile_at else "无需轮询"
@@ -3844,8 +4234,7 @@ def _optional_coinglass_config_encryptor() -> RsaOaepCredentialEncryptor | None:
         return None
     if not encoded_key or not key_version:
         raise RuntimeError(
-            "GATESCOPE_COINGLASS_WRAP_PUBLIC_KEY and GATESCOPE_COINGLASS_KEY_VERSION "
-            "must be set together"
+            "GATESCOPE_COINGLASS_WRAP_PUBLIC_KEY and GATESCOPE_COINGLASS_KEY_VERSION must be set together"
         )
     try:
         return RsaOaepCredentialEncryptor.from_base64_der(encoded_key, key_version)
@@ -3867,7 +4256,9 @@ def _optional_submission_decryptor() -> RsaOaepSubmissionDecryptor | None:
         )
     try:
         return RsaOaepSubmissionDecryptor.from_base64_der(
-            public_key, private_key, key_version,
+            public_key,
+            private_key,
+            key_version,
         )
     except ValueError as exc:
         raise RuntimeError("submission wrapping key configuration is invalid") from exc
@@ -3879,7 +4270,10 @@ def _legacy_plaintext_submission_allowed(request: Request) -> bool:
     client_host = (request.client.host if request.client else "").lower()
     request_host = (request.url.hostname or "").lower()
     return client_host in {"127.0.0.1", "::1", "localhost", "testclient"} and request_host in {
-        "127.0.0.1", "::1", "localhost", "testserver",
+        "127.0.0.1",
+        "::1",
+        "localhost",
+        "testserver",
     }
 
 

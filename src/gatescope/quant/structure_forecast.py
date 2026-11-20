@@ -41,7 +41,7 @@ def forecast(event, state, issued_at, deadline, last_close):
     levels = event["levels"]
     atr = levels.get("atr", levels.get("buffer", 0.1) / 0.15)
     sign = 1 if key.endswith("bull") else -1
-    spec = None
+    spec: tuple[float, float, float, float, float, str, int | None] | None = None
     condition = "形态需通过几何校验和右侧 4 根枢轴确认；触价不等于形成"
     structural_fallback = False
     # Guides use candle OPEN coordinates, just like lifecycle.resolve_rule.

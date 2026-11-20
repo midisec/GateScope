@@ -38,7 +38,7 @@ def closed_input_error(candles: list[dict]) -> str | None:
         if not isinstance(bar, dict):
             return "INVALID_CANDLE"
         ts = bar.get("ts")
-        if not finite(ts) or ts < 0 or int(ts) != ts or (previous is not None and ts <= previous):
+        if ts is None or not finite(ts) or ts < 0 or int(ts) != ts or (previous is not None and ts <= previous):
             return "INVALID_CANDLE_ORDER"
         previous = ts
         if "is_final" in bar and bar["is_final"] is not True:
@@ -310,7 +310,7 @@ def _canonical_boundary_windows(events: list[dict]) -> list[dict]:
         if event.get("region"):
             anchors = tuple(sorted((p["time"], p["price"], p.get("basis", ""), p.get("label", ""))
                                    for p in known_points(event)))
-            key = ("boundary", event["id"], event["phase"], event["end_time"],
+            key: tuple = ("boundary", event["id"], event["phase"], event["end_time"],
                    event["signal_direction"], anchors)
         else:
             key = ("other", index)

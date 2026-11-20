@@ -15,7 +15,7 @@ def event(bars, *, confirmed=False):
     points = [{"time": bars[i]["ts"], "price": p, "label": str(i)} for i, p in ((2, 105.), (8, 95.), (14, 105.))]
     raw = {"pattern": "double_top", "name": "双顶", "direction": "bearish", "signal_direction": "bearish",
         "confidence": .8, "confirmed": confirmed, "start_time": points[0]["time"], "end_time": points[-1]["time"],
-        "points": points, "lines": [{"from": a, "to": b, "style": "solid"} for a, b in zip(points, points[1:])]}
+        "points": points, "lines": [{"from": a, "to": b, "style": "solid"} for a, b in zip(points, points[1:], strict=False)]}
     if confirmed:
         raw["points"] = [*points, {"time": bars[-1]["ts"], "price": bars[-1]["close"], "label": "✓"}]
     return {**adapt_event(raw, bars), "evidence_id": digest(raw)}
@@ -24,7 +24,8 @@ def event(bars, *, confirmed=False):
 def test_first_observation_not_pivot_and_phase_never_rewritten():
     bars = candles()
     state = {}
-    detector = lambda prefix: [event(prefix, confirmed=len(prefix) >= 28)]
+    def detector(prefix):
+        return [event(prefix, confirmed=len(prefix) >= 28)]
     observe(bars, 19, state, detector=detector)
     frozen = copy.deepcopy(state["facts"])
     for i in range(20, 40):
@@ -112,7 +113,7 @@ def test_actual_detector_geometry_uses_known_times_only():
 def test_partial_impulse_only_labels_known_legs_and_no_predicted_target():
     bars = candles(51)
     vertices = [(0, 110), (5, 100), (15, 120), (25, 110), (35, 142), (45, 130), (50, 135)]
-    for (a, pa), (b, pb) in zip(vertices, vertices[1:]):
+    for (a, pa), (b, pb) in zip(vertices, vertices[1:], strict=False):
         for i in range(a, b + 1):
             price = pa + (pb - pa) * (i - a) / (b - a)
             bars[i].update(open=price, close=price, high=price + .1, low=price - .1)

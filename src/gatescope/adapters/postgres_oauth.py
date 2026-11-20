@@ -15,6 +15,7 @@ from typing import Any, NoReturn
 from urllib.parse import urlencode, urlsplit
 from uuid import UUID, uuid4
 
+from gatescope.adapters.postgres import required_row
 from gatescope.adapters.postgres import PostgresPool
 from gatescope.adapters.postgres_mcp import VerifiedMcpToken
 
@@ -144,7 +145,7 @@ class PostgresOAuthRepository:
             # Serialize a hard registration cap across API processes/restarts.
             connection.execute("SELECT pg_advisory_xact_lock(728429110)")
             connection.execute("SELECT gatescope_security.cleanup_oauth_ephemeral_credentials()")
-            count = connection.execute("SELECT count(*) FROM gatescope_security.oauth_registered_clients").fetchone()[0]
+            count = required_row(connection.execute("SELECT count(*) FROM gatescope_security.oauth_registered_clients").fetchone())[0]
             if count >= 10000:
                 _fail("temporarily_unavailable", "Client registration capacity reached.", 503)
             connection.execute("""INSERT INTO gatescope_security.oauth_registered_clients
@@ -184,6 +185,7 @@ class PostgresOAuthRepository:
               WHERE expires_at<now() ORDER BY expires_at LIMIT 500)""")
             counts = connection.execute("""SELECT count(*),count(*) FILTER(WHERE client_id=%s)
               FROM gatescope_security.oauth_pending_requests WHERE expires_at>now()""", (client[0],)).fetchone()
+            counts = required_row(counts)
             if counts[0] >= 5000 or counts[1] >= 30:
                 _fail("temporarily_unavailable", "Too many pending authorizations. Try later.", 429)
             connection.execute("""INSERT INTO gatescope_security.oauth_pending_requests
@@ -208,8 +210,8 @@ class PostgresOAuthRepository:
             pending = self._pending(connection, handle, browser_nonce, tenant_id, user_id)
             scopes = _approved_scopes(tuple(pending[5]), approved_scopes)
             connection.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s,728429112))", (f"{tenant_id}:{user_id}",))
-            active_count = connection.execute("""SELECT count(*) FROM oauth_grants
-              WHERE user_id=%s AND revoked_at IS NULL AND expires_at>now()""", (user_id,)).fetchone()[0]
+            active_count = required_row(connection.execute("""SELECT count(*) FROM oauth_grants
+              WHERE user_id=%s AND revoked_at IS NULL AND expires_at>now()""", (user_id,)).fetchone())[0]
             if active_count >= 100:
                 _fail("access_denied", "Revoke an existing ChatGPT connection before adding another.", 403)
             connection.execute("""INSERT INTO mcp_clients
@@ -335,7 +337,7 @@ class PostgresOAuthRepository:
             row = self._client(connection, client_id)
         if row[3] != method or (method == "none" and client_secret is not None):
             _fail("invalid_client", "Client authentication failed.", 401)
-        if method != "none" and (not _text(client_secret, 40, 128) or not secrets.compare_digest(row[4], _hash(client_secret))):
+        if method != "none" and (client_secret is None or not _text(client_secret, 40, 128) or not secrets.compare_digest(row[4], _hash(client_secret))):
             _fail("invalid_client", "Client authentication failed.", 401)
         return row
 

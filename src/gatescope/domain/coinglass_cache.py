@@ -58,8 +58,8 @@ def merge_refresh(
         retry_after_seconds=max(0, retry_at - now),
         cache_retained=False,
     )
-    old_match = old.get("match") if isinstance(old.get("match"), dict) else {}
-    new_match = result.get("match") if isinstance(result.get("match"), dict) else {}
+    old_match = old["match"] if isinstance(old.get("match"), dict) else {}
+    new_match = result["match"] if isinstance(result.get("match"), dict) else {}
     explicit_unsupported = attempt_status in {"UNSUPPORTED", "MISMATCH", "AMBIGUOUS"}
     same_identity = all(old.get(key) == value for key, value in identity.items())
     same_scope = (
@@ -257,7 +257,7 @@ def cached_evidence(payload: dict, *, now: int) -> tuple[int, int]:
     for series in payload.get("series", []):
         if not isinstance(series, dict):
             continue
-        metric = METRICS.get(series.get("id"))
+        metric = METRICS.get(series.get("id", ""))
         if (
             not metric
             or series.get("status") not in {"READY", "PARTIAL", "STALE"}

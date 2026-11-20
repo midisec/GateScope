@@ -9,6 +9,7 @@ from fastapi import APIRouter, HTTPException, Query, Request, Response
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from psycopg.errors import ForeignKeyViolation, UniqueViolation
 
+from gatescope.adapters.postgres import required_row
 from gatescope.adapters.postgres import PostgresPool
 from gatescope.adapters.postgres_backtests import BacktestRepository
 from gatescope.adapters.postgres_structure_research import StructureResearchRepository
@@ -132,7 +133,7 @@ def build_research_router(pool: PostgresPool) -> APIRouter:
                 "SELECT id,name,trial_count,created_at FROM research_discovery_reports ORDER BY created_at DESC,id DESC LIMIT 11 OFFSET %s",
                 (offset,),
             ).fetchall()
-            total = conn.execute("SELECT count(*) FROM research_discovery_reports").fetchone()[0]
+            total = required_row(conn.execute("SELECT count(*) FROM research_discovery_reports").fetchone())[0]
         return {
             "items": [
                 dict(zip(("id", "name", "trial_count", "created_at"), r, strict=True)) for r in rows[:10]

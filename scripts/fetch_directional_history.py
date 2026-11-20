@@ -32,7 +32,7 @@ def main():
                 continue
             endpoint = "/fapi/v1/klines" if kind == "1h" else "/fapi/v1/fundingRate"
             rows, cursor = [], START
-            for page in range(60):
+            for _page in range(60):
                 if cursor >= END:
                     break
                 params = dict(symbol=symbol, startTime=cursor, endTime=END-1, limit=1000)
@@ -64,9 +64,9 @@ def main():
                 raise ValueError("Public request page budget exceeded")
             stamps = [int(r[0] if kind == "1h" else r["fundingTime"]) for r in rows]
             if kind == "1h":
-                if len(rows) != (END-START)//3600000 or any(b-a != 3600000 for a,b in zip(stamps,stamps[1:])):
+                if len(rows) != (END-START)//3600000 or any(b-a != 3600000 for a,b in zip(stamps,stamps[1:], strict=False)):
                     raise ValueError("Missing hourly candle; do not interpolate")
-            elif stamps[0]-START > 9*3600000 or END-stamps[-1] > 9*3600000 or max(b-a for a,b in zip(stamps,stamps[1:])) > 9*3600000:
+            elif stamps[0]-START > 9*3600000 or END-stamps[-1] > 9*3600000 or max(b-a for a,b in zip(stamps,stamps[1:], strict=False)) > 9*3600000:
                 raise ValueError("Funding history gap exceeds 9 hours")
             payload = dict(symbol=symbol, kind=kind, rows=rows, source="https://fapi.binance.com"+endpoint,
                            fetched_at=datetime.now(timezone.utc).isoformat(), from_time=START, to_time=END,

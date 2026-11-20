@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from io import BytesIO
 from pathlib import Path
-from typing import Any
+from typing import Any, NoReturn
 import unicodedata
 
 from PIL import Image, ImageDraw, ImageFont, PngImagePlugin
@@ -47,7 +47,7 @@ class _Candle:
     is_final: bool
 
 
-def _error(reason: str) -> None:
+def _error(reason: str) -> NoReturn:
     raise ValueError(f"MCP_CHART_{reason}")
 
 
@@ -99,7 +99,7 @@ def _validate(snapshot: dict) -> tuple[list[_Candle], dict[str, dict[datetime, f
     source = snapshot.get("candles")
     if not isinstance(source, list) or not 1 <= len(source) <= MAX_BARS:
         _error("BAR_LIMIT")
-    rows = []
+    rows: list[_Candle] = []
     for index, item in enumerate(source):
         if not isinstance(item, dict):
             _error("CANDLE_INVALID")
@@ -240,8 +240,8 @@ def render_research_chart(snapshot: dict) -> bytes:
                 gap_x = (centres[index - 1] + centres[index]) / 2
                 gaps.append(gap_x)
                 for top, bottom in ((PRICE_TOP, PRICE_BOTTOM), (VOLUME_TOP, VOLUME_BOTTOM), (RSI_TOP, RSI_BOTTOM)):
-                    for y in range(top, bottom, 10):
-                        draw.line((gap_x, y, gap_x, min(y + 4, bottom)), fill="#566078")
+                    for gap_y in range(top, bottom, 10):
+                        draw.line((gap_x, gap_y, gap_x, min(gap_y + 4, bottom)), fill="#566078")
         values = [value for row in rows for value in (row.low, row.high)]
         values.extend(value for name in ("ema9", "ema21") for value in overlays[name].values() if value is not None)
         low, high = min(values), max(values)
@@ -264,8 +264,8 @@ def render_research_chart(snapshot: dict) -> bytes:
             x = centres[index]
             color = FORMING if not row.is_final else UP if row.close >= row.open else DOWN
             draw.line((x, price_y(row.high), x, price_y(row.low)), fill=color)
-            top, bottom = sorted((price_y(row.open), price_y(row.close)))
-            draw.rectangle((x - bar_width / 2, top, x + bar_width / 2, min(PRICE_BOTTOM, max(top + 1, bottom))), fill=color)
+            body_top, body_bottom = sorted((price_y(row.open), price_y(row.close)))
+            draw.rectangle((x - bar_width / 2, body_top, x + bar_width / 2, min(PRICE_BOTTOM, max(body_top + 1, body_bottom))), fill=color)
             if row.volume:
                 volume_y = VOLUME_BOTTOM - row.volume / volume_max * (VOLUME_BOTTOM - VOLUME_TOP)
                 draw.rectangle((x - bar_width / 2, volume_y, x + bar_width / 2, VOLUME_BOTTOM), fill=color)
@@ -284,10 +284,11 @@ def render_research_chart(snapshot: dict) -> bytes:
                 elif points:
                     x, y = points[0]
                     draw.ellipse((x - 1, y - 1, x + 1, y + 1), fill=color)
+        final_time = next((row.open_time for row in reversed(rows) if row.is_final), None)
         for name, color, x in (("ema9", EMA9, LEFT), ("ema21", EMA21, LEFT + 190)):
-            value = overlays[name].get(next((row.open_time for row in reversed(rows) if row.is_final), None))
-            draw.text((x, PRICE_TOP - 25), f"{name.upper()}  {_format(value) if value is not None else '未就绪 / 缺失'}", font=small, fill=color)
-        rsi_latest = overlays["rsi14"].get(next((row.open_time for row in reversed(rows) if row.is_final), None))
+            latest_value = overlays[name].get(final_time) if final_time is not None else None
+            draw.text((x, PRICE_TOP - 25), f"{name.upper()}  {_format(latest_value) if latest_value is not None else '未就绪 / 缺失'}", font=small, fill=color)
+        rsi_latest = overlays["rsi14"].get(final_time) if final_time is not None else None
         draw.text((LEFT, RSI_TOP - 27), f"RSI14  {_format(rsi_latest) if rsi_latest is not None else '未就绪 / 缺失'}   ·   30 / 70", font=font, fill=RSI)
         for index in sorted({round((len(rows) - 1) * tick / 4) for tick in range(5)}):
             label = rows[index].open_time.strftime("%m-%d %H:%M")

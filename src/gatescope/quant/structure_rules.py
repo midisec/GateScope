@@ -21,7 +21,7 @@ def audit(event, candles, volatility):
     prices = [p["price"] for p in pts]
     # refine() owns OHLC/source-finality and touch-residual checks. Do not claim
     # those were performed by this geometry-only function or its direct callers.
-    facts = {"rules_version": "geometry-3.3", "checks": [], "warnings": []}
+    facts: dict = {"rules_version": "geometry-3.3", "checks": [], "warnings": []}
     if not event.get("region") and not key.endswith(("flag", "pennant")):
         if any(a["time"] >= b["time"] for a, b in zip(pts, pts[1:], strict=False)):
             return "ANCHOR_ORDER", facts

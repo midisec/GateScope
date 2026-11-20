@@ -23,7 +23,7 @@ def main():
         inputs.append([symbol, data["sha256"]])
         for end in range(len(rows)-24*14, len(rows)+1, 24):
             bars = [dict(zip(("ts", "open", "high", "low", "close", "volume"),
-                    [r[0]//1000, *map(float, r[1:6])])) for r in rows[end-480:end]]
+                    [r[0]//1000, *map(float, r[1:6])], strict=False)) for r in rows[end-480:end]]
             by_time = {b["ts"]: b for b in bars}
             windows += 1
             for e in proposals(bars):

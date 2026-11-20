@@ -44,7 +44,7 @@ def _run_coinglass_loop(charts, tests, stopped, *, once=False, on_status=lambda 
     At most one configuration test and one chart job per turn keeps both queues
     moving. Actual HTTP requests still share the credential's request pacer.
     """
-    status = {"provider_tests_processed": 0, "coinglass_chart_jobs_processed": 0, "coinglass_loop_cycles": 0}
+    status: dict = {"provider_tests_processed": 0, "coinglass_chart_jobs_processed": 0, "coinglass_loop_cycles": 0}
     while not stopped.is_set():
         worked = failed = False
         for runtime, counter in (
@@ -148,7 +148,7 @@ def _formal_main(database_url: str) -> None:
     catalog_count = 0
     last_catalog = 0.0
     next_catalog_attempt = 0.0
-    history_status = {}
+    history_status: dict = {}
 
     def maintenance():
         nonlocal catalog_count, last_catalog, next_catalog_attempt
@@ -178,7 +178,7 @@ def _formal_main(database_url: str) -> None:
 
     executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="market-maintenance")
     provider_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="coinglass-provider")
-    provider_status = {}
+    provider_status: dict = {}
     provider_status_lock = threading.Lock()
 
     def provider_progress(current):

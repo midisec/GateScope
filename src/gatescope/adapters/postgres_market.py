@@ -41,9 +41,15 @@ class PostgresMarketReadDatabase:
             ).fetchall()
         return [
             {
-                "id": str(row[0]), "market": str(row[1]).lower(), "settle": str(row[2] or "").lower(),
-                "symbol": str(row[3]), "display_name": str(row[3]), "base": str(row[4]),
-                "quote": str(row[5]), "status": str(row[6]), "is_stock": False,
+                "id": str(row[0]),
+                "market": str(row[1]).lower(),
+                "settle": str(row[2] or "").lower(),
+                "symbol": str(row[3]),
+                "display_name": str(row[3]),
+                "base": str(row[4]),
+                "quote": str(row[5]),
+                "status": str(row[6]),
+                "is_stock": False,
             }
             for row in rows
         ]
@@ -53,56 +59,116 @@ class PostgresMarketReadDatabase:
             row = connection.execute("SELECT COUNT(*) FROM instruments").fetchone()
         return int(row[0]) if row else 0
 
-    def latest_chart_snapshot(self,instrument_id:str,timeframe:str,limit:int):
-        if limit>1500:return None
+    def latest_chart_snapshot(self, instrument_id: str, timeframe: str, limit: int):
+        if limit > 1500:
+            return None
         with self.pool.public_transaction() as c:
-            row=c.execute("""SELECT built_at,bar_count,
+            row = c.execute(
+                """SELECT built_at,bar_count,
                 COALESCE((SELECT jsonb_agg(value ORDER BY ord) FROM jsonb_array_elements(payload_json->'items')
                   WITH ORDINALITY AS items(value,ord) WHERE ord>bar_count-%s),'[]'::jsonb)
                 FROM market_chart_snapshots WHERE instrument_id=%s AND timeframe=%s
-                AND generation=built_generation AND bar_count>0""",(limit,UUID(instrument_id),timeframe)).fetchone()
-        if not row:return None
-        return {"items":row[2],"built_at":row[0].isoformat(),"bar_count":row[1]}
+                AND generation=built_generation AND bar_count>0""",
+                (limit, UUID(instrument_id), timeframe),
+            ).fetchone()
+        if not row:
+            return None
+        return {"items": row[2], "built_at": row[0].isoformat(), "bar_count": row[1]}
 
     def cache_status(self, instrument_id: str, timeframe: str) -> dict[str, Any]:
         with self.pool.public_transaction() as c:
-            row = c.execute("""SELECT active,target_bars,cached_bars,missing_bars,first_open_time,
+            row = c.execute(
+                """SELECT active,target_bars,cached_bars,missing_bars,first_open_time,
                 last_close_time,last_live_at,next_live_at,live_error_code,history_status,history_error_code,
                 last_history_at,next_history_at,target_from,target_to FROM market_sync_state WHERE instrument_id=%s AND timeframe=%s""",
-                (UUID(instrument_id), timeframe)).fetchone()
-            live = c.execute("""SELECT open_time,close_time,open,high,low,close,volume,observed_at
+                (UUID(instrument_id), timeframe),
+            ).fetchone()
+            live = c.execute(
+                """SELECT open_time,close_time,open,high,low,close,volume,observed_at
                 FROM market_live_candles WHERE instrument_id=%s AND timeframe=%s
-                AND close_time>now()""", (UUID(instrument_id), timeframe)).fetchone()
+                AND close_time>now()""",
+                (UUID(instrument_id), timeframe),
+            ).fetchone()
         now = datetime.now(timezone.utc)
         if row is None:
-            result = {"active": False, "history_status": "NOT_SUBSCRIBED", "target_bars": year_bounds(now,timeframe)[2], "stale": True}
+            result: dict[str, Any] = {
+                "active": False,
+                "history_status": "NOT_SUBSCRIBED",
+                "target_bars": year_bounds(now, timeframe)[2],
+                "stale": True,
+            }
         else:
-            result = dict(zip(("active", "target_bars", "cached_bars", "missing_bars", "first_open_time",
-                "last_close_time", "last_live_at", "next_live_at", "live_error_code", "history_status",
-                "history_error_code", "last_history_at", "next_history_at","target_from","target_to"), row, strict=True))
+            result = dict(
+                zip(
+                    (
+                        "active",
+                        "target_bars",
+                        "cached_bars",
+                        "missing_bars",
+                        "first_open_time",
+                        "last_close_time",
+                        "last_live_at",
+                        "next_live_at",
+                        "live_error_code",
+                        "history_status",
+                        "history_error_code",
+                        "last_history_at",
+                        "next_history_at",
+                        "target_from",
+                        "target_to",
+                    ),
+                    row,
+                    strict=True,
+                )
+            )
             result["stale"] = not row[0] or bool(row[8]) or not row[6] or (now - row[6]).total_seconds() > 45
         result["server_time"] = now
         result["period_days"] = 365
-        result["coverage_ratio"] = result.get("cached_bars",0)/result["target_bars"]
-        result["live_bar"] = ({"open_time": live[0].isoformat(), "close_time": live[1].isoformat(),
-            **{name: str(value) for name, value in zip(("open", "high", "low", "close", "volume"), live[2:7], strict=True)},
-            "available_at": live[7].isoformat(), "is_final": False, "revision": 0,
-            "quality_flags": ["FORMING_CANDLE", "DISPLAY_ONLY"]} if live else None)
+        result["coverage_ratio"] = result.get("cached_bars", 0) / result["target_bars"]
+        result["live_bar"] = (
+            {
+                "open_time": live[0].isoformat(),
+                "close_time": live[1].isoformat(),
+                **{
+                    name: str(value)
+                    for name, value in zip(("open", "high", "low", "close", "volume"), live[2:7], strict=True)
+                },
+                "available_at": live[7].isoformat(),
+                "is_final": False,
+                "revision": 0,
+                "quality_flags": ["FORMING_CANDLE", "DISPLAY_ONLY"],
+            }
+            if live
+            else None
+        )
         return result
 
     def watchlist_cache(self, tenant: UUID, user: UUID) -> list[dict[str, Any]]:
         with self.pool.transaction(tenant, user) as c:
-            rows = c.execute("""SELECT DISTINCT wi.instrument_id,wi.default_timeframe,
+            rows = c.execute(
+                """SELECT DISTINCT wi.instrument_id,wi.default_timeframe,
                 lc.close,lc.observed_at,s.last_live_at,s.history_status,s.cached_bars,s.target_bars,s.active
                 FROM watchlist_items wi JOIN watchlists w ON w.id=wi.watchlist_id
                 LEFT JOIN market_sync_state s ON s.instrument_id=wi.instrument_id AND s.timeframe=wi.default_timeframe
                 LEFT JOIN market_live_candles lc ON lc.instrument_id=wi.instrument_id AND lc.timeframe=wi.default_timeframe
                 WHERE w.deleted_at IS NULL AND w.tenant_id=%s AND w.owner_user_id=%s
-                LIMIT 1000""", (tenant, user)).fetchall()
+                LIMIT 1000""",
+                (tenant, user),
+            ).fetchall()
         now = datetime.now(timezone.utc)
-        return [{"instrument_id": str(r[0]), "timeframe": r[1], "price": str(r[2]) if r[2] is not None else None,
-            "observed_at": r[3], "stale": not r[8] or not r[3] or (now - r[3]).total_seconds() > 45,
-            "history_status": r[5] or "PENDING", "cached_bars": r[6] or 0, "target_bars": r[7] or year_bounds(now,r[1])[2]} for r in rows]
+        return [
+            {
+                "instrument_id": str(r[0]),
+                "timeframe": r[1],
+                "price": str(r[2]) if r[2] is not None else None,
+                "observed_at": r[3],
+                "stale": not r[8] or not r[3] or (now - r[3]).total_seconds() > 45,
+                "history_status": r[5] or "PENDING",
+                "cached_bars": r[6] or 0,
+                "target_bars": r[7] or year_bounds(now, r[1])[2],
+            }
+            for r in rows
+        ]
 
     def get_instrument(self, instrument_id: str) -> dict[str, Any] | None:
         try:
@@ -118,9 +184,15 @@ class PostgresMarketReadDatabase:
         if row is None:
             return None
         return {
-            "id": str(row[0]), "market": str(row[1]).lower(), "settle": str(row[2] or "").lower(),
-            "symbol": str(row[3]), "display_name": str(row[3]), "base": str(row[4]),
-            "quote": str(row[5]), "status": str(row[6]), "is_stock": False,
+            "id": str(row[0]),
+            "market": str(row[1]).lower(),
+            "settle": str(row[2] or "").lower(),
+            "symbol": str(row[3]),
+            "display_name": str(row[3]),
+            "base": str(row[4]),
+            "quote": str(row[5]),
+            "status": str(row[6]),
+            "is_stock": False,
         }
 
     def get_canonical_candles(
@@ -160,10 +232,12 @@ class PostgresMarketReadDatabase:
             # Exact catalog dimensions turn one instrument/timeframe into one
             # series. DISTINCT/ORDER now matches bars_current_lookup_idx without
             # putting venue/market ahead of time and sorting an entire year.
-            clauses.extend([
-                "venue=(SELECT venue FROM instruments WHERE id=%s)",
-                "market=(SELECT market FROM instruments WHERE id=%s)",
-            ])
+            clauses.extend(
+                [
+                    "venue=(SELECT venue FROM instruments WHERE id=%s)",
+                    "market=(SELECT market FROM instruments WHERE id=%s)",
+                ]
+            )
             params.extend([identifier, identifier])
         distinct_keys = "open_time" if latest else "venue, market, instrument_id, timeframe, open_time"
         order_prefix = "" if latest else "venue, market, instrument_id, timeframe, "
@@ -179,17 +253,25 @@ class PostgresMarketReadDatabase:
                            extract(epoch FROM open_time)::bigint, open, high, low, close,
                            volume, extract(epoch FROM available_at)::bigint,
                            venue, market, revision, quality_flags, is_final
-                    FROM bars WHERE {' AND '.join(clauses)}
+                    FROM bars WHERE {" AND ".join(clauses)}
                     ORDER BY {order_prefix}open_time {time_order}, revision DESC
                     LIMIT %s""",
                 params,
             ).fetchall()
         return [
             {
-                "ts": int(row[0]), "open": row[1], "high": row[2], "low": row[3],
-                "close": row[4], "volume": row[5], "updated_at": int(row[6]),
-                "venue": str(row[7]), "market": str(row[8]), "revision": int(row[9]),
-                "quality_flags": list(row[10]), "is_final": bool(row[11]),
+                "ts": int(row[0]),
+                "open": row[1],
+                "high": row[2],
+                "low": row[3],
+                "close": row[4],
+                "volume": row[5],
+                "updated_at": int(row[6]),
+                "venue": str(row[7]),
+                "market": str(row[8]),
+                "revision": int(row[9]),
+                "quality_flags": list(row[10]),
+                "is_final": bool(row[11]),
             }
             for row in (reversed(rows) if latest else rows)
         ]

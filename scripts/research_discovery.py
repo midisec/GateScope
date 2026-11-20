@@ -74,7 +74,7 @@ def main():
                 bars = repository.bars(instrument, timeframe, expected, as_of, start, end, source_manifest=manifest)
                 step = 14400 if timeframe == "4h" else 28800
                 if len(bars) != expected or bars[0].open_time != start or bars[-1].close_time != end or any(
-                    (b.open_time-a.open_time).total_seconds()!=step for a,b in zip(bars,bars[1:])):
+                    (b.open_time-a.open_time).total_seconds()!=step for a,b in zip(bars,bars[1:], strict=False)):
                     raise RuntimeError(f"Incomplete one-year dataset: {symbol} {timeframe}, bars={len(bars)}")
                 key = f"{symbol}-{timeframe}"
                 datasets[key] = (bars, manifest)

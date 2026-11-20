@@ -9,7 +9,7 @@ from psycopg.types.json import Jsonb
 
 from gatescope.adapters.postgres_paper import PaperConflict, PaperNotFound, PaperPreconditionFailed
 from gatescope.adapters.postgres_worker_health import PostgresWorkerHealth
-from tests.integration.test_paper_orders import opening, paperdb, quote
+from tests.integration.test_paper_orders import opening, quote
 from tests.integration.test_postgres_rls import INSTRUMENT, TENANT_A, TENANT_B, USER_A, USER_B
 
 

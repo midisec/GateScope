@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import builtins
+
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Mapping
@@ -46,7 +48,7 @@ class PostgresAlertRuleRepository:
     def __init__(self, pool: PostgresPool) -> None:
         self.pool = pool
 
-    def list(self, tenant_id: UUID, owner_id: UUID, *, limit: int = 100) -> list[AlertRule]:
+    def list(self, tenant_id: UUID, owner_id: UUID, *, limit: int = 100) -> builtins.list[AlertRule]:
         with self.pool.transaction(tenant_id, owner_id) as connection:
             rows = connection.execute(
                 self._select() + " WHERE r.owner_user_id=%s AND r.status<>'DELETED' ORDER BY r.updated_at DESC, r.id DESC LIMIT %s",
@@ -66,7 +68,7 @@ class PostgresAlertRuleRepository:
 
     def list_events(
         self, tenant_id: UUID, owner_id: UUID, *, limit: int = 50,
-    ) -> list[dict[str, Any]]:
+    ) -> builtins.list[dict[str, Any]]:
         with self.pool.transaction(tenant_id, owner_id) as connection:
             rows = connection.execute(
                 """SELECT a.id,r.id,r.name,i.symbol,a.timeframe,a.available_at,

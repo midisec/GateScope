@@ -400,7 +400,7 @@ class PostgresStrategyRepository:
         from gatescope.application.storage_pressure import safe_storage_status
 
         storage = safe_storage_status(status.get("storage_pressure"))
-        safe_status = {
+        safe_status: dict = {
             "tenant_count": max(0, int(status.get("tenant_count", 0))),
             "rule_count": max(0, int(status.get("rule_count", 0))),
             "scanned_rules": max(0, int(status.get("scanned_rules", 0))),

@@ -7,6 +7,7 @@ from datetime import date, datetime, timezone
 from decimal import Decimal
 from uuid import UUID
 
+from gatescope.adapters.postgres import required_row
 from gatescope.adapters.postgres import PostgresPool, validated_uuid
 from gatescope.domain.market import TIMEFRAME_SECONDS
 
@@ -40,7 +41,8 @@ def _bounds(limit, offset, *, maximum=100):
 
 
 def _page(items, total, limit, offset):
-    selected, size = [], 0
+    selected: list[dict] = []
+    size = 0
     budget_limited = False
     for item in items[:limit]:
         ready = _json_ready(item)
@@ -107,7 +109,7 @@ class McpResearchRepository:
             owned = """FROM watchlist_items wi JOIN watchlists w ON w.id=wi.watchlist_id AND w.tenant_id=wi.tenant_id
               JOIN instruments i ON i.id=wi.instrument_id
               WHERE w.tenant_id=%s AND w.owner_user_id=%s AND wi.tenant_id=%s AND w.deleted_at IS NULL"""
-            total = conn.execute("SELECT count(*) " + owned, (tenant, user, tenant)).fetchone()[0]
+            total = required_row(conn.execute("SELECT count(*) " + owned, (tenant, user, tenant)).fetchone())[0]
             rows = conn.execute(
                 """SELECT jsonb_build_object('watchlist_id',w.id,'watchlist_name',w.name,
               'position',wi.position,'instrument_id',i.id,'symbol',i.symbol,'venue',i.venue,'market',i.market,
@@ -136,11 +138,11 @@ class McpResearchRepository:
         args = (tenant, user, instrument, instrument, timeframe, timeframe)
         with self.pool.read_transaction(tenant, user) as conn:
             self._timeouts(conn)
-            total = conn.execute(
+            total = required_row(conn.execute(
                 "SELECT count(*) FROM research_backtests r WHERE r.tenant_id=%s AND r.owner_user_id=%s"
                 + filtered,
                 args,
-            ).fetchone()[0]
+            ).fetchone())[0]
             rows = conn.execute(
                 _RUN_SUMMARY + filtered + " ORDER BY r.created_at DESC,r.id DESC LIMIT %s OFFSET %s",
                 (*args, limit, offset),
@@ -197,7 +199,7 @@ class McpResearchRepository:
         if section == "trades":
             where += " AND selected AND state IN ('TARGET','STOP','TIMEOUT')"
         args = (run_id, tenant, user)
-        total = conn.execute(f"SELECT count(*) FROM {table}" + where, args).fetchone()[0]
+        total = required_row(conn.execute(f"SELECT count(*) FROM {table}" + where, args).fetchone())[0]
         rows = conn.execute(
             f"SELECT {value} FROM {table}" + where + f" ORDER BY {order} LIMIT %s OFFSET %s",
             (*args, limit, offset),

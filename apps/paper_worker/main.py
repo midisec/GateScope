@@ -37,6 +37,7 @@ def run_plane(plane, database_url, worker_id, subject_id, stopped, *, once=False
     health = PostgresWorkerHealth(pool)
     try:
         pool.open()
+        monitor: PaperOrderMonitor | PaperTradeMonitor | ShadowTradeMonitor
         if plane == "orders":
             market = GatePaperMarket()
             monitor = PaperOrderMonitor(PostgresPaperOrderRepository(pool), market)
@@ -52,7 +53,7 @@ def run_plane(plane, database_url, worker_id, subject_id, stopped, *, once=False
                 result = monitor.run_once()
                 counts = {key: value for key, value in vars(result).items() if key != "elapsed_seconds"}
                 safe_error = f"{error_prefix}_PARTIAL_FAILURE" if result.failed else None
-                if plane == "orders" and not safe_error and result.unavailable:
+                if plane == "orders" and not safe_error and counts.get("unavailable"):
                     safe_error = "PAPER_ORDER_MARKET_UNAVAILABLE"
                 event(f"{event_prefix}.cycle", worker_id=worker_id,
                       elapsed_seconds=round(time.monotonic()-started, 3), **counts)

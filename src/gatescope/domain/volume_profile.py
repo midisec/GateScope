@@ -91,9 +91,9 @@ def _integer(value: Any) -> int | None:
 
 def _candle(row: Mapping[str, Any]) -> tuple[float, float, float] | None:
     values = [_number(row.get(name)) for name in ("open", "high", "low", "close", "volume")]
-    if any(value is None for value in values):
-        return None
     opening, high, low, close, volume = values
+    if opening is None or high is None or low is None or close is None or volume is None:
+        return None
     if low <= 0 or high < low or not low <= opening <= high or not low <= close <= high or volume < 0:
         return None
     return low, high, volume
@@ -209,10 +209,10 @@ O(n log rows + rows), with no per-candle array of price-bin contributions.
             precision_limited = True
             for index in range(first+1, last):
                 _add(mass, error, index, remaining*((edges[index+1]-edges[index])/(edges[last]-edges[first+1])))
-    density, density_error = [0.0], [0.0]
+    running_density, density_error = [0.0], [0.0]
     for index in range(count):
-        _add(density, density_error, 0, delta[index])
-        interior = max(0, density[0])*((edges[index+1]-edges[index])/span) if span > 0 else 0
+        _add(running_density, density_error, 0, delta[index])
+        interior = max(0, running_density[0])*((edges[index+1]-edges[index])/span) if span > 0 else 0
         _add(mass, error, index, interior)
     accumulated = math.fsum(mass)
     if precision_limited or abs(accumulated-total[0]) > total[0]*1e-10:
@@ -321,7 +321,8 @@ availability is not evidence that the revision was observable at this request.
         if ts % plan.source_step_seconds or close != ts+plan.source_step_seconds:
             flags.add("INVALID_SOURCE_TIMESTAMP_EXCLUDED")
             continue
-        if _number(row["available_at"]) < close or _number(row["created_at"]) < 0:
+        available, created = _number(row["available_at"]), _number(row["created_at"])
+        if available is None or created is None or available < close or created < 0:
             flags.add("INVALID_SOURCE_AVAILABILITY_EXCLUDED")
             continue
         if close > plan.to_time or close > asof:

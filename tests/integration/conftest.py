@@ -11,6 +11,9 @@ from alembic import command
 from alembic.config import Config
 
 
+from tests.integration.test_paper_orders import paperdb as paperdb
+
+
 TEST_DATABASE_URL = os.environ.get("TEST_DATABASE_URL")
 
 

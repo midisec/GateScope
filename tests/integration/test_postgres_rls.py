@@ -211,7 +211,7 @@ def test_formal_api_blocks_business_until_mfa(monkeypatch: pytest.MonkeyPatch, m
     monkeypatch.setenv("GATESCOPE_RECOVERY_PEPPER", base64.urlsafe_b64encode(b"p" * 32).decode())
     monkeypatch.setenv("GATESCOPE_CURSOR_SIGNING_KEY", base64.urlsafe_b64encode(b"c" * 32).decode())
     monkeypatch.setenv("GATESCOPE_IDENTITY_KEY_VERSION", "integration-v1")
-    monkeypatch.setenv("GATESCOPE_PUBLIC_ORIGIN", "http://testserver")
+    monkeypatch.setenv("GATESCOPE_PUBLIC_ORIGIN", "https://testserver")
     monkeypatch.setenv("GATESCOPE_TELEGRAM_BOT_USERNAME", "gatescope_test_bot")
     monkeypatch.setenv("GATESCOPE_TELEGRAM_WEBHOOK_ID", "w" * 32)
     monkeypatch.setenv("GATESCOPE_TELEGRAM_WEBHOOK_SECRET", "s" * 32)
@@ -220,7 +220,7 @@ def test_formal_api_blocks_business_until_mfa(monkeypatch: pytest.MonkeyPatch, m
     monkeypatch.setenv("GATESCOPE_TELEGRAM_ALLOWED_USER_IDS", "")
     monkeypatch.setenv("GATESCOPE_LOGIN_WORKSPACES", "tenant-a,tenant-b")
 
-    with TestClient(create_formal_app(), base_url="http://testserver") as client:
+    with TestClient(create_formal_app(), base_url="https://testserver") as client:
         research_paths = ("/api/v2/research/shadow-trades", "/api/v2/research/shadow-trades/summary",
                           f"/api/v2/research/backtests/{INSTRUMENT}/cases")
         for path in research_paths:

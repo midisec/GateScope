@@ -13,6 +13,7 @@ from uuid import NAMESPACE_URL, UUID, uuid5
 
 from psycopg.types.json import Jsonb
 
+from gatescope.adapters.postgres import required_row
 from gatescope.adapters.postgres import PostgresPool
 from gatescope.domain.market import TIMEFRAME_SECONDS
 from gatescope.quant.structure_trade import (
@@ -66,7 +67,7 @@ class ShadowTradeRepository:
 
     @staticmethod
     def _enabled(conn) -> datetime:
-        return conn.execute("SELECT enabled_at FROM shadow_runtime WHERE singleton").fetchone()[0]
+        return required_row(conn.execute("SELECT enabled_at FROM shadow_runtime WHERE singleton").fetchone())[0]
 
     @staticmethod
     def _event(conn, tenant, owner, identifier, sequence, event_type, observed_at, payload) -> None:
@@ -105,7 +106,7 @@ class ShadowTradeRepository:
             for alert, instrument, timeframe, available, created, payload in rows:
                 signal_at = max(available, created)
                 step = TIMEFRAME_SECONDS.get(timeframe, 3600)
-                market = conn.execute("SELECT market FROM instruments WHERE id=%s", (instrument,)).fetchone()[0]
+                market = required_row(conn.execute("SELECT market FROM instruments WHERE id=%s", (instrument,)).fetchone())[0]
                 policy = normalize_policy({"timeframe_seconds": step,
                                            **({"funding_bps_per_8h": 0} if market == "SPOT" else {})})
                 expires_at = signal_at + timedelta(seconds=step * int(policy["max_entry_wait_bars"]))

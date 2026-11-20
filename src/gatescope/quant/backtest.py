@@ -102,7 +102,7 @@ def features(bars: Sequence[Bar], spec: StrategySpec, *, progress: Callable[[int
     ])
     result = [] if output is None else output
     latest_available: datetime | None = None
-    selected = spec.rule_ids if spec.strategy == "composite" else [spec.strategy]
+    selected: list[str] = spec.rule_ids if spec.strategy == "composite" else [spec.strategy]
     patterns = [key.removeprefix("pattern:") for key in selected if key.startswith("pattern:")]
     replay = PatternReplay(patterns, spec.pattern_confidence) if patterns else None
     recent: list[dict[str, Any]] = []
@@ -125,7 +125,8 @@ def features(bars: Sequence[Bar], spec: StrategySpec, *, progress: Callable[[int
         values["channel.high"] = max((float(b.high) for b in prior), default=None)
         values["channel.low"] = min((float(b.low) for b in prior), default=None)
         ready = index >= max(spec.slow_period, spec.lookback, 28) and all(v is not None for v in values.values())
-        side, matched, conflict, regime = 0, [], False, "UNKNOWN"
+        matched: list[str] = []
+        side, conflict, regime = 0, False, "UNKNOWN"
         latest_available = max(available_time(bar, spec), latest_available or available_time(bar, spec))
         new_patterns = replay.append(bar, index, latest_available.isoformat()) if replay else []
         recent = [event for event in recent if index - event["observed_index"] < spec.coincidence_bars] + new_patterns

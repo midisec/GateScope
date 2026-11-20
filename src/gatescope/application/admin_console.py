@@ -102,7 +102,8 @@ class AdminConsoleService:
     def _business(self, actor):
         # These foundation tables have tenant RLS. Do not append owner-only
         # order/research tables and mislabel the OWNER's rows as tenant totals.
-        queries, params = [], []
+        queries: list[str] = []
+        params: list = []
         for key, table, predicate in (
             ("watchlists", "watchlists", "AND deleted_at IS NULL"),
             ("chart_layouts", "chart_layouts", "AND deleted_at IS NULL"),
@@ -168,7 +169,8 @@ class AdminConsoleService:
         result = {str(user): dict.fromkeys(USER_RESOURCE_KEYS, 0) for user in users}
         if not users:
             return result
-        queries, params = [], []
+        queries: list[str] = []
+        params: list = []
         for key, table, predicate in (
             ("watchlists", "watchlists", "AND deleted_at IS NULL"),
             ("alert_rules", "alert_rules", "AND status<>'DELETED'"),
@@ -271,9 +273,9 @@ class AdminConsoleService:
         return {"scope": scope, "generated_at": datetime.now(timezone.utc).isoformat(), **_pagination(items, total, page, page_size)}
 
     def _physical(self, actor):
-        tables = [{"table": name, "total_bytes": None, "estimated_rows": None, "includes_descendants": True,
+        tables: list[dict] = [{"table": name, "total_bytes": None, "estimated_rows": None, "includes_descendants": True,
                    "available": False} for name in SHARED_TABLES]
-        physical = {"scope": "SHARED_DATABASE", "not_per_user": True, "database_bytes": None, "tables": tables,
+        physical: dict = {"scope": "SHARED_DATABASE", "not_per_user": True, "database_bytes": None, "tables": tables,
                     "row_count_kind": "ESTIMATE_NOT_EXACT", "warnings": ["EXTERNAL_COMPRESSION_STORAGE_NOT_ATTRIBUTED"],
                     "storage_coverage": "BASE_AND_INHERITED_RELATIONS", "collected_at": datetime.now(timezone.utc).isoformat()}
         try:
@@ -304,7 +306,7 @@ class AdminConsoleService:
                 physical["warnings"].append("TABLE_CATALOG_BUDGET_EXCEEDED")
         except Exception:
             physical["warnings"].append("TABLE_STORAGE_UNAVAILABLE")
-        disk = {"scope": "APPLICATION_HOST_FILESYSTEM", "total_bytes": None, "used_bytes": None,
+        disk: dict = {"scope": "APPLICATION_HOST_FILESYSTEM", "total_bytes": None, "used_bytes": None,
                 "free_bytes": None, "used_percent": None, "available": False}
         try:
             usage = shutil.disk_usage(self.disk_path)

@@ -3,6 +3,7 @@
 Candidate signals reuse the production next-open/ATR/cost simulator. This module
 does not add every searched parameter to the deployable strategy catalog.
 """
+from typing import Literal
 from dataclasses import dataclass, asdict
 from itertools import product
 
@@ -18,7 +19,7 @@ class Candidate:
     family: str
     threshold: int
     regime: str
-    direction: str
+    direction: Literal["LONG", "SHORT", "BOTH"]
     stop_atr: float
     reward_risk: float
     holding: int
@@ -34,14 +35,15 @@ class Candidate:
 
 
 def candidates():
+    directions: tuple[Literal["LONG", "BOTH"], ...] = ("LONG", "BOTH")
     return [Candidate(*values) for values in product(FAMILIES,(0,1),("ANY","TREND","RANGE"),
-            ("LONG","BOTH"),(2.,3.),(.7,1.2),(6,18))]
+            directions,(2.,3.),(.7,1.2),(6,18))]
 
 
 def mining_features(bars):
     values = features(bars,StrategySpec(slow_period=100, availability_mode="HISTORICAL_CLOSE"))
     rsi, sma = RSI({"period":2}), SMA({"period":200})
-    for bar, point in zip(bars,values):
+    for bar, point in zip(bars,values, strict=False):
         point["values"]["rsi2"] = rsi.update(bar,{})["rsi"]
         point["values"]["sma200"] = sma.update(bar,{})["sma"]
     return values
@@ -49,12 +51,12 @@ def mining_features(bars):
 
 def candidate_signals(bars, points, candidate):
     result = []
-    for i,(bar,point) in enumerate(zip(bars,points)):
+    for i,(bar,point) in enumerate(zip(bars,points, strict=False)):
         v, side = point["values"], 0
         if i >= 200 and point["ready"]:
             close, opened, high, low = map(float,(bar.close,bar.open,bar.high,bar.low))
             prev, prev_close = points[i-1]["values"],float(bars[i-1].close)
-            atr, fast, slow = v["atr.atr"],v["fast.ema"],v["slow.ema"]
+            atr, fast = v["atr.atr"], v["fast.ema"]
             strength = candidate.threshold
             if candidate.family=="rsi2":
                 boundary = (10,25)[strength]

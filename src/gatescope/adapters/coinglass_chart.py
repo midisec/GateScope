@@ -226,7 +226,7 @@ def fetch_chart(
         except CoinglassError as exc:
             result["safe_errors"].append({"group": endpoint.split("/")[0], "code": exc.code})
             rate_limited = isinstance(exc, CoinglassRateLimited)
-            if rate_limited:
+            if isinstance(exc, CoinglassRateLimited):
                 result["retry_after_seconds"] = min(MAX_RETRY_AFTER_SECONDS, max(1, exc.retry_after_seconds))
             for metric_id in metric_ids:
                 series = normalize_series(metric_id, [], timeframe=timeframe, fetched_at=now, limit=limit)

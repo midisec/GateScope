@@ -7,6 +7,7 @@ from uuid import UUID, uuid4
 
 from psycopg.types.json import Jsonb
 
+from gatescope.adapters.postgres import required_row
 from gatescope.adapters.postgres import PostgresPool
 from gatescope.adapters.postgres_structure_archive import context_id
 from gatescope.domain.coinglass_cache import (
@@ -27,10 +28,10 @@ class PostgresCoinglassContextRepository:
 
     def provider_wait(self, tenant_id, user_id, config_id, secret_version: int) -> int:
         with self.pool.transaction(tenant_id, user_id) as conn:
-            return conn.execute(
+            return required_row(conn.execute(
                 "SELECT gatescope_security.coinglass_provider_wait(%s,%s,%s,%s)",
                 (tenant_id, user_id, config_id, secret_version),
-            ).fetchone()[0]
+            ).fetchone())[0]
 
     def pause_provider(self, tenant_id, user_id, config_id, secret_version: int, seconds: int) -> int:
         if isinstance(seconds, bool) or not isinstance(seconds, int) or not 0 <= seconds <= 2_147_483_647:
@@ -38,15 +39,15 @@ class PostgresCoinglassContextRepository:
         if not seconds:
             return self.provider_wait(tenant_id, user_id, config_id, secret_version)
         with self.pool.transaction(tenant_id, user_id) as conn:
-            return conn.execute(
+            return required_row(conn.execute(
                 "SELECT gatescope_security.pause_coinglass_provider(%s,%s,%s,%s,%s)",
                 (tenant_id, user_id, config_id, secret_version, seconds),
-            ).fetchone()[0]
+            ).fetchone())[0]
 
     def get(self, tenant_id, user_id, instrument_id: UUID, timeframe: str, request: bool = False) -> dict:
         if timeframe not in PERIODS:
             raise ValueError("UNSUPPORTED_TIMEFRAME")
-        empty = {
+        empty: dict = {
             "version": "coinglass-context-1",
             "instrument_id": str(instrument_id),
             "timeframe": timeframe,
@@ -93,34 +94,34 @@ class PostgresCoinglassContextRepository:
                   AND EXISTS(SELECT 1 FROM instruments i WHERE i.id=instrument_id AND i.status='ACTIVE')""",
                 (tenant_id, user_id, instrument_id, timeframe),
             ).fetchone()
-            wait = conn.execute(
+            wait = required_row(conn.execute(
                 "SELECT gatescope_security.coinglass_provider_wait(%s,%s,%s,%s)",
                 (tenant_id, user_id, *config),
-            ).fetchone()[0]
+            ).fetchone())[0]
         now = int(datetime.now(timezone.utc).timestamp())
         valid = bool(row and row[1] == config[0] and row[2] == config[1])
-        requested = bool(valid and request and row[5] and row[5].timestamp() > now - 5)
-        result = row[0] if valid and row[0] else {"status": "QUEUED" if requested else "NOT_CACHED"}
+        requested = bool(row is not None and valid and request and row[5] and row[5].timestamp() > now - 5)
+        result = row[0] if row is not None and valid and row[0] else {"status": "QUEUED" if requested else "NOT_CACHED"}
         if request and not valid:
             result = {**result, "reason": "CACHE_REQUEST_NOT_QUEUED"}
         result = project_cache(
             {**empty, **result},
             now=now,
             requested=requested,
-            due_at=int(row[3].timestamp()) if valid else 0,
-            last_updated=int(row[4].timestamp()) if valid and row[4] else 0,
+            due_at=int(row[3].timestamp()) if row is not None and valid else 0,
+            last_updated=int(row[4].timestamp()) if row is not None and valid and row[4] else 0,
             provider_retry_at=now + wait if wait else 0,
         )
-        pending = int(row[6].timestamp()) if valid and row[6] else 0
-        eligible = bool(valid and (pending or row[9] or (row[5] and row[5].timestamp() > now - 7200)))
+        pending = int(row[6].timestamp()) if row is not None and valid and row[6] else 0
+        eligible = bool(row is not None and valid and (pending or row[9] or (row[5] and row[5].timestamp() > now - 7200)))
         return project_refresh_state(
             result,
             now=now,
             exists=valid,
             eligible=eligible,
             pending_since=pending,
-            lease_until=int(row[7].timestamp()) if valid and row[7] else 0,
-            collection_started_at=int(row[8].timestamp()) if valid and row[8] else 0,
+            lease_until=int(row[7].timestamp()) if row is not None and valid and row[7] else 0,
+            collection_started_at=int(row[8].timestamp()) if row is not None and valid and row[8] else 0,
         )
 
     def seed(self):
@@ -247,9 +248,9 @@ class PostgresCoinglassContextRepository:
             previous = self._locked_payload(conn, job)
             if previous is None:
                 return
-            wait = conn.execute(
+            wait = required_row(conn.execute(
                 "SELECT gatescope_security.coinglass_provider_wait(%s,%s,%s,%s)", provider
-            ).fetchone()[0]
+            ).fetchone())[0]
             retry = epoch(bundle.get("retry_after_seconds"))
             absolute = epoch(bundle.get("retry_at"))
             if absolute:
@@ -257,10 +258,10 @@ class PostgresCoinglassContextRepository:
             # Hooks normally persisted the pause when 429 arrived. Only fill a
             # missing pause here; never move that original deadline on completion.
             if retry and not wait:
-                wait = conn.execute(
+                wait = required_row(conn.execute(
                     "SELECT gatescope_security.pause_coinglass_provider(%s,%s,%s,%s,%s)",
                     (*provider, min(2_147_483_647, retry)),
-                ).fetchone()[0]
+                ).fetchone())[0]
             result = merge_refresh(
                 previous[0],
                 bundle,

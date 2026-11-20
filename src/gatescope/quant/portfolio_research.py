@@ -189,7 +189,7 @@ def run_portfolio(cases: list[dict[str,Any]], bars: Iterable[dict[str,Any]], pol
             stop_execution=row["stop_price"]*(1-row["side"]*row.get("slippage_bps",0)/10000)
             stop_cost_risk=max(0,row["side"]*(row["entry_price"]-stop_execution)/row["entry_price"])+fee_rate*(1+stop_execution/row["entry_price"])
             stop_cost_risk+=row["funding_bps_per_8h"]/10000*row.get("max_holding_bars",0)*row["step_seconds"]/28800
-            if reason is None:
+            if reason is None and equity is not None:
                 immediate_cost=fee_rate+fee_rate*row["raw_entry_price"]/row["entry_price"]-row["side"]*(row["raw_entry_price"]-row["entry_price"])/row["entry_price"]
                 exposure_room=max(0,equity*policy.max_exposure_fraction-reserved)/(1+policy.max_exposure_fraction*max(0,immediate_cost))
                 notional=min(equity*policy.risk_fraction/stop_cost_risk,equity*policy.per_position_fraction,

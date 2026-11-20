@@ -3,13 +3,23 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
-from typing import Any, Iterator
+from typing import Any, Iterator, TypeVar
 from uuid import UUID
 
 from psycopg import Connection, Error as PostgresError
 from psycopg.conninfo import conninfo_to_dict
 from psycopg.pq import TransactionStatus
 from psycopg_pool import ConnectionPool
+
+
+_Row = TypeVar("_Row")
+
+
+def required_row(row: _Row | None) -> _Row:
+    """Unwrap a query whose SQL promises one row, including scalar aggregates."""
+    if row is None:
+        raise RuntimeError("EXPECTED_DATABASE_ROW_MISSING")
+    return row
 
 
 def validated_uuid(value: str | UUID) -> UUID:

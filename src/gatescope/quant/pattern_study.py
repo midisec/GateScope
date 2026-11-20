@@ -41,7 +41,7 @@ def _finite_number(value: Any, *, positive: bool = False) -> bool:
     # Python integers can also overflow math.isfinite's conversion to double.
     try:
         return (isinstance(value, Real) and not isinstance(value, bool)
-                and math.isfinite(value) and (value > 0 if positive else value >= 0))
+                and math.isfinite(value) and (float(value) > 0 if positive else float(value) >= 0))
     except (TypeError, ValueError, OverflowError):
         return False
 
@@ -81,13 +81,15 @@ def _wave_prefix_valid(candles: list[dict]) -> bool:
         if not isinstance(row, dict) or row.get("is_final", True) is not True:
             return False
         timestamp = row.get("ts")
-        if (not _finite_number(timestamp) or int(timestamp) != timestamp
+        if (timestamp is None or not _finite_number(timestamp) or int(timestamp) != timestamp
                 or (previous is not None and timestamp <= previous)):
             return False
-        values = [row.get(key) for key in ("open", "high", "low", "close")]
+        values = [row[key] if key in row else None for key in ("open", "high", "low", "close")]
         if any(not _finite_number(value, positive=True) for value in values):
             return False
         opened, high, low, close = values
+        if opened is None or low is None or high is None or close is None:
+            return False
         if not low <= min(opened, close) <= max(opened, close) <= high:
             return False
         # Volume is optional for geometry-only callers, just as in refine().
@@ -175,8 +177,8 @@ def forming_waves(candles: list[dict], *, precision_mode: bool = False, preserve
             # their intrabar order; never turn them into two sequential waves.
             if any(a.index >= b.index for a, b in zip(seq, seq[1:], strict=False)):
                 continue
-            first = "low" if (bullish if impulse or cycle else not bullish) else "high"
-            if any(p.kind != (first if i % 2 == 0 else "high" if first == "low" else "low") for i, p in enumerate(seq)):
+            first_kind = "low" if (bullish if impulse or cycle else not bullish) else "high"
+            if any(p.kind != (first_kind if i % 2 == 0 else "high" if first_kind == "low" else "low") for i, p in enumerate(seq)):
                 continue
             if not 10 <= seq[-1].index - seq[0].index <= (420 if cycle else 260 if impulse else 180):
                 continue

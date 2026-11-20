@@ -6,7 +6,7 @@ import json
 from typing import Literal
 from uuid import UUID, uuid4
 
-from mcp_types import CallToolResult, ImageContent, TextContent, ToolAnnotations
+from mcp_types import ContentBlock, CallToolResult, ImageContent, TextContent, ToolAnnotations
 
 from gatescope.application.paper_execution import PaperExecutionError, execution_failure
 from gatescope.domain.paper_decision import PaperDecisionContext
@@ -25,11 +25,11 @@ PAPER_WRITE = ToolAnnotations(read_only_hint=False, destructive_hint=True,
 
 
 def _result(payload, *, error=False, meta=None, image_data=None):
-    content = [TextContent(type="text", text=json.dumps(payload, ensure_ascii=False, allow_nan=False))]
+    content: list[ContentBlock] = [TextContent(type="text", text=json.dumps(payload, ensure_ascii=False, allow_nan=False))]
     if image_data is not None:
         content.append(ImageContent(type="image", mime_type="image/png", data=image_data))
     return CallToolResult(content=content,
-                          structured_content=payload, is_error=error, meta=meta)
+                          structured_content=payload, is_error=error, _meta=meta)
 
 
 def register_paper_tools(server, service, principal, audit, public_origin):

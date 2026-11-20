@@ -92,7 +92,7 @@ def _hard_limits_usable(levels, last_bar):
 
     def positive_number(value):
         try:
-            return isinstance(value, Real) and not isinstance(value, bool) and math.isfinite(value) and value > 0
+            return isinstance(value, Real) and not isinstance(value, bool) and math.isfinite(value) and float(value) > 0
         except (OverflowError, ValueError):
             return False
 
@@ -109,10 +109,10 @@ def _hard_limits_usable(levels, last_bar):
             or not isinstance(inclusive, bool)
         ):
             return False
-        wick = last_bar.get("high" if side > 0 else "low")
-        if not positive_number(wick):
+        wick = last_bar.get("high" if side == 1 else "low")
+        if wick is None or price is None or not positive_number(wick):
             return False
-        distance = side * (wick - price)
+        distance = wick - price if side == 1 else price - wick
         if distance >= 0 if inclusive else distance > 0:
             return False
     return True

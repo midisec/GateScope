@@ -51,7 +51,7 @@ def probability(wins: int, count: int) -> dict:
     import math
     from statistics import NormalDist
 
-    result = {
+    result: dict = {
         "sample_count": count,
         "successes": wins,
         "rate": wins / count if count else None,
@@ -248,7 +248,8 @@ def observe(
 
     records = state.setdefault("records", {})
     state.setdefault("facts", [])
-    journal, resolved = [], []
+    journal: list[dict] = []
+    resolved: list[dict] = []
     # Delayed by one bar: a new prediction cannot train on an outcome from its own bar.
     for key, success in state.pop("pending_training", []):
         cell = state.setdefault("training", {}).setdefault(key, [0, 0])

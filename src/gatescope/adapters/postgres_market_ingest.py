@@ -9,6 +9,7 @@ from decimal import Decimal
 from typing import Any, Sequence
 from uuid import UUID
 
+from gatescope.adapters.postgres import required_row
 from gatescope.adapters.legacy_sqlite import legacy_instrument_uuid
 from gatescope.adapters.gate_catalog_rules import catalog_revision_payload, catalog_rules_equal
 from gatescope.adapters.market_history_bounds import history_bounds
@@ -159,8 +160,8 @@ class PostgresMarketIngestRepository:
     def provider_retry_at(self) -> datetime | None:
         # Retain provider-wide backoff even if the user changes/removes subscriptions.
         with self.pool.public_transaction() as c:
-            return c.execute("""SELECT max(next_live_at) FROM market_sync_state
-                WHERE live_error_code='MARKET_RATE_LIMITED' AND next_live_at>now()""").fetchone()[0]
+            return required_row(c.execute("""SELECT max(next_live_at) FROM market_sync_state
+                WHERE live_error_code='MARKET_RATE_LIMITED' AND next_live_at>now()""").fetchone())[0]
 
     def history_plan(self, s: MarketSubscription, now: datetime) -> dict[str, Any]:
         """Repair the newest gap first, including internal outages, at most 900 bars."""
@@ -175,6 +176,7 @@ class PostgresMarketIngestRepository:
                   AND open_time>=to_timestamp(%s) AND open_time<=to_timestamp(%s)
                   AND mod(extract(epoch FROM open_time),%s)=0""",
                 (s.instrument_id,s.timeframe,now,s.venue,s.market,now,now,start,end,step)).fetchone()
+            stats = required_row(stats)
             blocked = c.execute("""SELECT from_time,to_time FROM market_history_deferred
                 WHERE instrument_id=%s AND timeframe=%s AND retry_at>%s""",(s.instrument_id,s.timeframe,now)).fetchall()
             with c.cursor(name="year_gaps") as gap_cursor:

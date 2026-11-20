@@ -125,8 +125,8 @@ def test_public_study_queue_roles_snapshot_and_restart(migrated_database):
             assert client.get("/api/v2/patterns/events?"+query+"&limit=999").status_code==422
             original_chart=detail.json()
             revised=list(rows)
-            t,o,h,l,c,v=revised[50]
-            revised[50]=(t,o*2,h*2,l*2,c*2,v)
+            t,o,h,low,c,v=revised[50]
+            revised[50]=(t,o*2,h*2,low*2,c*2,v)
             extra=make_bars(190)
             extra=[replace(b,open_time=b.open_time+shift,close_time=b.close_time+shift,available_at=b.available_at+shift,payload_hash="") for b in extra]
             revised.extend((int(b.open_time.timestamp()),float(b.open),float(b.high),float(b.low),float(b.close),float(b.volume)) for b in extra[180:])

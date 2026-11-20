@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import base64
 import json
-from typing import Any
+from typing import Annotated, Any
 
 from mcp.server import MCPServer
-from mcp_types import CallToolResult, ImageContent, TextContent, ToolAnnotations
+from mcp_types import ContentBlock, CallToolResult, ImageContent, TextContent, ToolAnnotations
 from apps.mcp_server.paper import PAPER_READ_TOOLS, PAPER_WRITE_TOOLS
 
 READ_ONLY = ToolAnnotations(read_only_hint=True, destructive_hint=False,
@@ -51,7 +51,7 @@ def chart_tool_result(payload: dict[str, Any], *, nested_chart: bool = False) ->
     else:
         result["image_status"] = "NO_DATA" if isinstance(chart, dict) and chart.get("status") == "NO_DATA" else "UNAVAILABLE"
         result["image_unavailable_reason"] = "NO_RENDERABLE_CHART_CANDLES"
-    content = [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, allow_nan=False))]
+    content: list[ContentBlock] = [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, allow_nan=False))]
     if image_content is not None:
         content.append(image_content)
     return CallToolResult(content=content, structured_content=result)
@@ -106,7 +106,7 @@ def register_research_tools(server, service, principal, public_origin: str) -> N
                 content=[TextContent(type="text", text=(
                     "Research data permission is required. Reconnect and explicitly authorize research:read "
                     "to read your own watchlist and existing backtests. No data was returned."))],
-                meta={"mcp/www_authenticate": [
+                _meta={"mcp/www_authenticate": [
                     f'Bearer resource_metadata="{public_origin}/.well-known/oauth-protected-resource/mcp", '
                     'error="insufficient_scope", error_description="Explicit research data consent is required", '
                     'scope="mcp:connect market:read analysis:read research:read"'
@@ -257,7 +257,7 @@ def register_research_tools(server, service, principal, public_origin: str) -> N
     def market_chart_snapshot(
         instrument_id: str | None = None, symbol: str | None = None, market: str | None = None,
         timeframe: str = "15m", bar_limit: int = 150, include_forming: bool = False,
-    ) -> dict[str, Any]:
+    ) -> Annotated[CallToolResult, dict[str, Any]]:
         """Return an actual PNG candlestick chart AND the exact OHLCV/indicators used to draw it.
 
         Specify instrument_id OR exact symbol plus market on each call. Requires market:read and analysis:read.

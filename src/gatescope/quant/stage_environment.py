@@ -45,8 +45,11 @@ def stage_environment_key(bars, step_seconds):
         fast_values = [fast.push(row["close"]) for row in values]
         for row in values:
             slow.push(row["close"])
-        trend = "UP" if fast_values[-1]-slow.value > .25*atr and fast_values[-1] > fast_values[-6] else (
-            "DOWN" if slow.value-fast_values[-1] > .25*atr and fast_values[-1] < fast_values[-6] else "RANGE")
+        current, prior = fast_values[-1], fast_values[-6]
+        if slow.value is None or current is None or prior is None:
+            return None
+        trend = "UP" if current-slow.value > .25*atr and current > prior else (
+            "DOWN" if slow.value-current > .25*atr and current < prior else "RANGE")
         atr_ratio = atr/baseline
         volatility = "HIGH" if atr_ratio >= 1.5 else "LOW" if atr_ratio <= 2/3 else "NORMAL"
         volume_ratio = values[-1]["volume"]/volume_mean

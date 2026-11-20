@@ -5,7 +5,11 @@ from __future__ import annotations
 import time
 from datetime import datetime, timezone
 from math import isfinite
-from typing import Any
+from abc import ABC, abstractmethod
+from typing import Any, Callable
+from gatescope.adapters.postgres_mcp import VerifiedMcpToken
+from gatescope.adapters.postgres_market import PostgresMarketReadDatabase
+from gatescope.indicators.registry import IndicatorRegistry
 from uuid import UUID
 
 from psycopg.errors import LockNotAvailable, QueryCanceled
@@ -39,8 +43,52 @@ def arguments(values: dict[str, Any]) -> dict[str, Any]:
     return {key: value for key, value in values.items() if key not in {"self", "principal"}}
 
 
-class McpResearchTools:
+class McpResearchTools(ABC):
     """Mixin sharing the authenticated/audited facade's dependencies and envelope."""
+
+    market: PostgresMarketReadDatabase
+    registry: IndicatorRegistry
+    structures: Any
+    research: Any
+
+    @abstractmethod
+    def market_analysis_snapshot(
+        self, principal: VerifiedMcpToken, *, instrument_id: str | None = None,
+        symbol: str | None = None, market: str | None = None, timeframe: str = "15m",
+        indicator_ids: list[str] | None = None, bar_limit: int = 500,
+    ) -> dict[str, Any]:
+        ...
+
+    @abstractmethod
+    def market_preview(
+        self, tenant_id: UUID, user_id: UUID, *, instrument_id: str | None = None,
+        symbol: str | None = None, market: str | None = None, timeframe: str = "15m",
+        indicator_ids: list[str] | None = None, bar_limit: int = 500,
+        request_coinglass: bool = True,
+    ) -> dict[str, Any]:
+        ...
+
+    @abstractmethod
+    def _resolve_instrument(
+        self, instrument_id: str | None, symbol: str | None, market: str | None,
+    ) -> dict[str, Any]:
+        ...
+
+    @abstractmethod
+    def _invoke(
+        self,
+        principal: VerifiedMcpToken,
+        tool_name: str,
+        required_scope: str | tuple[str, ...],
+        arguments: dict[str, Any],
+        function: Callable[[], dict[str, Any]],
+    ) -> dict[str, Any]:
+        ...
+
+    @staticmethod
+    @abstractmethod
+    def _envelope(*, items: list[dict[str, Any]], **metadata: Any) -> dict[str, Any]:
+        ...
 
     def _evidence(self, payload: dict[str, Any], **metadata: Any) -> dict[str, Any]:
         from gatescope.application.mcp_tools import _json_safe
@@ -277,7 +325,7 @@ class McpResearchTools:
                  IndicatorNode("rsi14", "rsi", {"period": 14})]
         points = compute_batch(self.registry, nodes, contiguous)
         visible_times = {bar.open_time for bar in displayed}
-        overlays = {node.instance_id: [] for node in nodes}
+        overlays: dict[str, list] = {node.instance_id: [] for node in nodes}
         for point in points:
             if point.open_time not in visible_times:
                 continue
@@ -321,7 +369,7 @@ class McpResearchTools:
         instrument = snapshot["instrument"]
         try:
             captured = datetime.fromisoformat(snapshot["as_of"])
-            bars = []
+            bars: list[Bar] = []
             for candle in snapshot["candles"]:
                 bar = Bar(**{key: candle[key] for key in (
                     "venue", "market", "instrument_id", "timeframe", "open", "high", "low",

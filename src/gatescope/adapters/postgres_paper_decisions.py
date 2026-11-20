@@ -64,8 +64,8 @@ def decision_snapshot(connection, tenant_id, owner_id, instrument_id, symbol, ti
                             "revision", "available_at", "payload_hash", "quality_flags", "created_at"), row, strict=True))) for row in rows]
     for bar in bars:
         bar["is_final"] = True
-    indicators = {"EMA9": EMA({"period": 9}), "EMA21": EMA({"period": 21}), "RSI14": RSI({"period": 14})}
-    series = {key: [] for key in indicators}
+    indicators: dict[str, EMA | RSI] = {"EMA9": EMA({"period": 9}), "EMA21": EMA({"period": 21}), "RSI14": RSI({"period": 14})}
+    series: dict[str, list[dict]] = {key: [] for key in indicators}
     gaps = []
     previous = None
     for bar in bars:

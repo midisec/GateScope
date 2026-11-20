@@ -11,6 +11,21 @@ from pattern_engine import PATTERN_CATALOG, _wilson_interval, scan_patterns
 GOLDEN_DIR = Path(__file__).resolve().parent
 
 
+def normalize_geometry(value):
+    # BLAS implementations differ in the last bits of fitted line coordinates.
+    # Keep identifiers, times, decisions and all other fields exactly as emitted.
+    if isinstance(value, list):
+        return [normalize_geometry(item) for item in value]
+    if isinstance(value, dict):
+        return {
+            key: float(format(item, ".12g"))
+            if key in {"price", "top_start", "top_end", "bottom_start", "bottom_end"} and isinstance(item, float)
+            else normalize_geometry(item)
+            for key, item in value.items()
+        }
+    return value
+
+
 def deterministic_candles() -> list[dict]:
     candles = []
     for index in range(480):
@@ -45,8 +60,8 @@ def test_pattern_output_is_repeatable() -> None:
         include_statistics=True,
         performance_horizons=(5, 10, 20, 50),
     )
-    raw = json.dumps(result, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
-    assert hashlib.sha256(raw).hexdigest() == golden["sha256"]
+    raw = json.dumps(normalize_geometry(result), ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
+    assert hashlib.sha256(raw).hexdigest() == golden["sha256_geometry_12_digits"]
     assert len(result["events"]) == golden["event_count"]
     assert Counter(event["pattern"] for event in result["events"]) == golden["counts_by_pattern"]
 

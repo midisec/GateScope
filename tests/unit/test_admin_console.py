@@ -63,17 +63,20 @@ def scope(who):
     return ("SELECT t.id,t.slug,t.name", [(who.tenant_id, "test-workspace", "测试工作区")])
 
 
+AUTH_TEST_TIME = datetime(2026, 1, 1, tzinfo=timezone.utc)
+
+
 @pytest.mark.parametrize("who,code", [
     (None, "AUTH_REQUIRED"), (actor(fully_authenticated=False), "MFA_REQUIRED"),
     (actor(role=Role.OPERATOR), "ADMIN_OWNER_REQUIRED"),
     (actor(recent_auth_at=None), "RECENT_AUTH_REQUIRED"),
-    (actor(recent_auth_at=datetime.now(timezone.utc)-timedelta(hours=1)), "RECENT_AUTH_REQUIRED"),
-    (actor(recent_auth_at=datetime.now(timezone.utc)+timedelta(minutes=1)), "RECENT_AUTH_REQUIRED"),
+    (actor(recent_auth_at=AUTH_TEST_TIME-timedelta(hours=1)), "RECENT_AUTH_REQUIRED"),
+    (actor(recent_auth_at=AUTH_TEST_TIME+timedelta(minutes=1)), "RECENT_AUTH_REQUIRED"),
     (actor(recent_auth_at=datetime.now()), "RECENT_AUTH_REQUIRED"),
 ])
 def test_owner_and_recent_auth_fail_closed(who, code):
     with pytest.raises(AdminConsoleError) as failure:
-        require_owner(who, recent=True)
+        require_owner(who, recent=True, now=AUTH_TEST_TIME)
     assert failure.value.code == code
 
 

@@ -19,6 +19,7 @@ from gatescope.adapters.postgres_paper import PaperNotFound, PostgresPaperReposi
 from gatescope.domain.market import Bar, TIMEFRAME_SECONDS
 from gatescope.domain.coinglass_context import METRICS
 from gatescope.indicators import IndicatorNode, compute_batch, default_registry
+from gatescope.indicators.models import IndicatorPoint
 from gatescope.application.mcp_research_tools import McpResearchTools
 
 TIMEFRAMES = frozenset(TIMEFRAME_SECONDS)
@@ -331,11 +332,11 @@ class McpAnalysisService(McpResearchTools):
     def _indicators(self, bars: list[Bar], requested: list[str]) -> list[dict[str, Any]]:
         contiguous = _contiguous_suffix(bars)
         points = compute_batch(self.registry, [IndicatorNode(item, item, {}) for item in requested], contiguous)
-        latest = {}
-        for point in points:
-            previous = latest.get(point.instance_id)
-            if previous is None or point.open_time > previous.open_time:
-                latest[point.instance_id] = point
+        latest: dict[str, IndicatorPoint] = {}
+        for sample in points:
+            previous = latest.get(sample.instance_id)
+            if previous is None or sample.open_time > previous.open_time:
+                latest[sample.instance_id] = sample
         items = []
         for identifier in requested:
             definition = self.registry.definition(identifier)
@@ -812,7 +813,10 @@ def _context_epoch(value: Any) -> float:
 def _coinglass_availability(context: dict[str, Any], instrument_id: str, timeframe: str) -> dict[str, Any]:
     """Give consumers per-metric availability, not an all-or-nothing queue label."""
     series = {item.get("id"): item for item in context.get("series", []) if isinstance(item, dict)}
-    metrics, available, fresh, stale = [], [], [], []
+    metrics: list[dict] = []
+    available: list[str] = []
+    fresh: list[str] = []
+    stale: list[str] = []
     scope = context.get("scope")
     exact = ((context.get("match") or {}).get("status") == "EXACT"
              and isinstance(scope, dict) and bool(scope)
@@ -825,10 +829,10 @@ def _coinglass_availability(context: dict[str, Any], instrument_id: str, timefra
                 and item.get("population") == population and item.get("native_timeframe") == timeframe
                 and item.get("status") in {"READY", "PARTIAL", "STALE"} and isinstance(points, list)):
             for point in points:
-                if not isinstance(point, dict) or isinstance(point.get("value"), bool):
+                if not isinstance(point, dict) or "value" not in point or isinstance(point["value"], bool):
                     continue
                 try:
-                    value = float(point.get("value"))
+                    value = float(point["value"])
                 except (ValueError, TypeError, OverflowError):
                     continue
                 opened, closed, known = (_context_epoch(point.get(key)) for key in ("time", "close_time", "available_at"))

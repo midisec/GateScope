@@ -57,8 +57,8 @@ def bar_document(bar: Bar) -> dict[str, Any]:
 
 def document_bar(item: dict[str, Any]) -> Bar:
     return Bar(**{key: item[key] for key in ("venue", "market", "instrument_id", "timeframe", "is_final", "revision", "source_sequence")},
-        **{key: datetime.fromisoformat(item[key]) for key in ("open_time", "close_time", "available_at")},
-        **{key: Decimal(item[key]) for key in ("open", "high", "low", "close", "volume")},
+        open_time=datetime.fromisoformat(item["open_time"]), close_time=datetime.fromisoformat(item["close_time"]), available_at=datetime.fromisoformat(item["available_at"]),
+        open=Decimal(item["open"]), high=Decimal(item["high"]), low=Decimal(item["low"]), close=Decimal(item["close"]), volume=Decimal(item["volume"]),
         quality_flags=frozenset(item["quality_flags"]))
 
 
@@ -67,23 +67,23 @@ class SpillSequence(Sequence):
                  decode: Callable = lambda value: value) -> None:
         self.connection, self.name, self.encode, self.decode = connection, name, encode, decode
         self.buffer: list[Any] = []
-        self.count = 0
+        self._length = 0
         self.cache_index = -1
         self.cache: list[Any] = []
 
     def __len__(self) -> int:
-        return self.count
+        return self._length
 
     def append(self, value: Any) -> None:
         self.buffer.append(self.encode(value))
-        self.count += 1
+        self._length += 1
         if len(self.buffer) == CHUNK_ROWS:
             self.flush()
 
     def flush(self) -> None:
         if not self.buffer:
             return
-        index = (self.count - len(self.buffer)) // CHUNK_ROWS
+        index = (self._length - len(self.buffer)) // CHUNK_ROWS
         payload, digest = encode_chunk(self.buffer)
         self.connection.execute("INSERT OR REPLACE INTO chunks VALUES(?,?,?,?,?)",
             (self.name, index, len(self.buffer), payload, digest))
@@ -94,11 +94,11 @@ class SpillSequence(Sequence):
 
     def __getitem__(self, key: int | slice) -> Any:
         if isinstance(key, slice):
-            return [self[index] for index in range(*key.indices(self.count))]
-        index = key + self.count if key < 0 else key
-        if not 0 <= index < self.count:
+            return [self[index] for index in range(*key.indices(self._length))]
+        index = key + self._length if key < 0 else key
+        if not 0 <= index < self._length:
             raise IndexError(index)
-        start = self.count - len(self.buffer)
+        start = self._length - len(self.buffer)
         if index >= start:
             return self.decode(self.buffer[index - start])
         chunk = index // CHUNK_ROWS
@@ -111,7 +111,7 @@ class SpillSequence(Sequence):
         return self.cache[index % CHUNK_ROWS]
 
     def __iter__(self) -> Iterator[Any]:
-        for index in range(self.count):
+        for index in range(self._length):
             yield self[index]
 
     def chunks(self) -> Iterator[tuple[int, int, bytes, str]]:

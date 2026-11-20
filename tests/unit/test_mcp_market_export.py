@@ -182,7 +182,11 @@ def test_same_client_selects_instrument_and_period_per_call_without_shared_selec
             assert result["latest_closed"]["instrument_id"] == identifier
             assert result["latest_closed"]["timeframe"] == timeframe
             assert result["latest_closed"]["close"] == str(windows[(identifier, timeframe)].rows[-1]["close"])
-    assert results[0]["coinglass"] == results[-1]["coinglass"]
+    first, last = (deepcopy(result["coinglass"]) for result in (results[0], results[-1]))
+    # Each read reports its own elapsed time, even for the same cache entry.
+    for snapshot in (first, last):
+        assert snapshot["cache_wait"].pop("waited_seconds") >= 0
+    assert first == last
     assert context.calls == [
         (identity.tenant_id, identity.subject_user_id, UUID(identifier), timeframe, True)
         for identifier, timeframe in selections

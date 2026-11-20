@@ -690,9 +690,9 @@ def render_notification(delivery: ClaimedDelivery) -> str:
                 pass
             return "未知"
         action = "开仓" if payload.get("effect") == "OPEN" else "平仓"
-        side = {"LONG": "多仓", "SHORT": "空仓"}.get(payload.get("side"), "未知方向")
+        side = {"LONG": "多仓", "SHORT": "空仓"}.get(payload.get("side", ""), "未知方向")
         reason = {"STOP_LOSS": "止损触发", "TAKE_PROFIT": "止盈触发", "MANUAL": "用户委托", "USER_ORDER": "用户委托"}.get(
-            payload.get("reason"), str(payload.get("reason", "委托成交")))
+            payload.get("reason", ""), str(payload.get("reason", "委托成交")))
         return telegram_text(
             f"🧪 GateScope · PAPER 模拟{action}成交\n\n"
             f"{payload.get('symbol', '未知')} · {side} · {payload.get('timeframe', '')}\n"

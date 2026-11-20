@@ -21,11 +21,18 @@ TOPIC_RE = re.compile(r"^(market\.bar\.delta|indicator\.delta):([^:]{1,120}):(1m
 
 
 class LegacyReadDatabase(Protocol):
-    def search_instruments(self, query: str, market: str, limit: int, offset: int) -> list[dict[str, Any]]: ...
+    def search_instruments(
+        self, query: str, market: str, limit: int, offset: int
+    ) -> list[dict[str, Any]]: ...
     def instrument_count(self) -> int: ...
     def get_instrument(self, instrument_id: str) -> dict[str, Any] | None: ...
     def get_canonical_candles(
-        self, instrument_id: str, interval: str, start_ts: int | None, end_ts: int | None, limit: int,
+        self,
+        instrument_id: str,
+        interval: str,
+        start_ts: int | None,
+        end_ts: int | None,
+        limit: int,
     ) -> list[dict[str, Any]]: ...
     def candle_bounds(self, instrument_id: str, interval: str) -> tuple[int | None, int | None]: ...
 
@@ -103,23 +110,33 @@ def build_v2_router(
         if start_ts is not None and end_ts is not None and start_ts > end_ts:
             raise HTTPException(422, "from 必须早于或等于 to")
         binding = {
-            "instrument_id": instrument_id, "timeframe": timeframe,
-            "from": start_ts, "to": end_ts, "limit": limit, "latest": latest,
+            "instrument_id": instrument_id,
+            "timeframe": timeframe,
+            "from": start_ts,
+            "to": end_ts,
+            "limit": limit,
+            "latest": latest,
         }
         if latest and cursor is not None:
             raise HTTPException(422, "latest 视图不接受 cursor")
         if cursor:
             after = _cursor_integer(cursors, cursor, binding, "after")
             start_ts = max(start_ts or after + 1, after + 1)
-        if latest and start_ts is None and end_ts is None and hasattr(database,"latest_chart_snapshot"):
-            prepared=database.latest_chart_snapshot(instrument_id,timeframe,limit)
+        if latest and start_ts is None and end_ts is None and hasattr(database, "latest_chart_snapshot"):
+            prepared = database.latest_chart_snapshot(instrument_id, timeframe, limit)
             if prepared:
-                items=prepared["items"];watermark=items[-1]["available_at"] if items else None
-                return {**_page(items,None,False,request.state.trace_id),"as_of":datetime.now(timezone.utc).isoformat(),
-                    "data_watermark":watermark,"staleness_ms":_staleness_ms(watermark),
-                    "quality_flags":sorted({q for b in items for q in b["quality_flags"]}),
-                    "cache":database.cache_status(instrument_id,timeframe),"read_source":"BACKGROUND_SNAPSHOT",
-                    "snapshot_built_at":prepared["built_at"]}
+                items = prepared["items"]
+                watermark = items[-1]["available_at"] if items else None
+                return {
+                    **_page(items, None, False, request.state.trace_id),
+                    "as_of": datetime.now(timezone.utc).isoformat(),
+                    "data_watermark": watermark,
+                    "staleness_ms": _staleness_ms(watermark),
+                    "quality_flags": sorted({q for b in items for q in b["quality_flags"]}),
+                    "cache": database.cache_status(instrument_id, timeframe) if hasattr(database, "cache_status") else None,
+                    "read_source": "BACKGROUND_SNAPSHOT",
+                    "snapshot_built_at": prepared["built_at"],
+                }
         if latest and start_ts is None:
             if hasattr(database, "latest_candle_time"):
                 maximum = database.latest_candle_time(instrument_id, timeframe)
@@ -147,7 +164,11 @@ def build_v2_router(
     @rest.get("/market/watchlist-cache")
     def watchlist_cache(request: Request) -> dict[str, Any]:
         session = request.state.auth_session
-        items = database.watchlist_cache(session.tenant_id, session.user_id) if hasattr(database, "watchlist_cache") else []
+        items = (
+            database.watchlist_cache(session.tenant_id, session.user_id)
+            if hasattr(database, "watchlist_cache")
+            else []
+        )
         return {"items": items}
 
     @rest.get("/indicators/catalog")
@@ -156,19 +177,23 @@ def build_v2_router(
         for identifier in registry.identifiers():
             definition = registry.definition(identifier)
             defaults = {name: spec.default for name, spec in definition.params.items()}
-            items.append({
-                "indicator_id": identifier,
-                "version": definition.version,
-                "outputs": definition.outputs,
-                "parameters": {
-                    name: {
-                        "type": "integer" if spec.kind is int else "number",
-                        "default": spec.default, "minimum": spec.minimum, "maximum": spec.maximum,
-                    }
-                    for name, spec in definition.params.items()
-                },
-                "warmup_bars": definition.warmup(defaults),
-            })
+            items.append(
+                {
+                    "indicator_id": identifier,
+                    "version": definition.version,
+                    "outputs": definition.outputs,
+                    "parameters": {
+                        name: {
+                            "type": "integer" if spec.kind is int else "number",
+                            "default": spec.default,
+                            "minimum": spec.minimum,
+                            "maximum": spec.maximum,
+                        }
+                        for name, spec in definition.params.items()
+                    },
+                    "warmup_bars": definition.warmup(defaults),
+                }
+            )
         return {"items": items, "trace_id": request.state.trace_id}
 
     @rest.get("/patterns/catalog")
@@ -183,8 +208,11 @@ def build_v2_router(
                     "name": str(item["name"]),
                     "group": str(item["group"]),
                     "direction": (
-                        "bearish" if item["id"] == "elliott_impulse_bull" else
-                        "bullish" if item["id"] == "elliott_impulse_bear" else str(item["direction"])
+                        "bearish"
+                        if item["id"] == "elliott_impulse_bull"
+                        else "bullish"
+                        if item["id"] == "elliott_impulse_bear"
+                        else str(item["direction"])
                     ),
                     "structural_direction": str(item["direction"]),
                     "experimental": bool(item.get("experimental", False)),
@@ -205,11 +233,14 @@ def build_v2_router(
         if start is not None and end is not None and start > end:
             raise HTTPException(422, "from_time 必须早于或等于 to_time")
         raw_bars = database.get_canonical_candles(
-            payload.instrument_id, payload.timeframe, start, end, payload.limit,
+            payload.instrument_id,
+            payload.timeframe,
+            start,
+            end,
+            payload.limit,
         )
         canonical = [
-            _canonical_bar(instrument, payload.instrument_id, payload.timeframe, row)
-            for row in raw_bars
+            _canonical_bar(instrument, payload.instrument_id, payload.timeframe, row) for row in raw_bars
         ]
         nodes = [
             IndicatorNode(node.instance_id, node.indicator_id, node.params, tuple(node.depends_on))
@@ -264,22 +295,38 @@ def build_v2_router(
                 stream_key = f"{session.user_id}:{message.topic}"
                 if message.action == "unsubscribe":
                     await _ws_send(
-                        websocket, sequences, "unsubscribed", stream_key,
+                        websocket,
+                        sequences,
+                        "unsubscribed",
+                        stream_key,
                         {"request_id": message.request_id, "topic": message.topic},
                     )
                     continue
                 watermark, snapshot_url = _topic_snapshot(database, message.topic)
                 if message.cursor is not None and message.cursor != watermark:
                     await _ws_send(
-                        websocket, sequences, "resync_required", stream_key,
-                        {"request_id": message.request_id, "snapshot_url": snapshot_url, "watermark": watermark},
+                        websocket,
+                        sequences,
+                        "resync_required",
+                        stream_key,
+                        {
+                            "request_id": message.request_id,
+                            "snapshot_url": snapshot_url,
+                            "watermark": watermark,
+                        },
                     )
                     continue
                 await _ws_send(
-                    websocket, sequences, "subscribed", stream_key,
+                    websocket,
+                    sequences,
+                    "subscribed",
+                    stream_key,
                     {
-                        "request_id": message.request_id, "topic": message.topic,
-                        "watermark": watermark, "snapshot_url": snapshot_url, "buffer_limit": 1_000,
+                        "request_id": message.request_id,
+                        "topic": message.topic,
+                        "watermark": watermark,
+                        "snapshot_url": snapshot_url,
+                        "buffer_limit": 1_000,
                     },
                 )
         except WebSocketDisconnect:
@@ -303,8 +350,6 @@ def _utc_epoch(value: datetime) -> int:
     if value.tzinfo is None:
         raise HTTPException(422, "timestamps must include a timezone")
     return int(value.astimezone(timezone.utc).timestamp())
-
-
 
 
 def _quality_flags(bars: list[Bar]) -> list[str]:
@@ -341,12 +386,14 @@ async def _ws_send(
 ) -> None:
     sequence = sequences.get(stream_key, 0) + 1
     sequences[stream_key] = sequence
-    await websocket.send_json({
-        "type": message_type,
-        "stream_key": stream_key,
-        "sequence": sequence,
-        "watermark": str(payload.get("watermark", "")),
-        "server_time": datetime.now(timezone.utc).isoformat(),
-        "schema_version": 1,
-        "payload": payload,
-    })
+    await websocket.send_json(
+        {
+            "type": message_type,
+            "stream_key": stream_key,
+            "sequence": sequence,
+            "watermark": str(payload.get("watermark", "")),
+            "server_time": datetime.now(timezone.utc).isoformat(),
+            "schema_version": 1,
+            "payload": payload,
+        }
+    )

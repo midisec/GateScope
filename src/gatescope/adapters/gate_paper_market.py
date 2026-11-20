@@ -138,7 +138,9 @@ class GatePaperMarket:
                     PUBLIC_ORIGIN + PUBLIC_PREFIX + path, params=params,
                     headers={"Accept": "application/json", "Accept-Encoding": "identity",
                              "User-Agent": "gatescope-paper/1.0", "X-Gate-Size-Decimal": "1"},
-                    timeout=timeout, allow_redirects=False, stream=True,
+                    # requests forwards urllib3 Timeout objects directly; its stubs omit that overload.
+                    timeout=timeout,  # type: ignore[arg-type]
+                    allow_redirects=False, stream=True,
                 ) as response:
                     if response.status_code == 429:
                         retry = self._retry_after(response.headers.get("Retry-After", "30"))

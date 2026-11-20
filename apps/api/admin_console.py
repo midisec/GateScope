@@ -19,6 +19,7 @@ def build_admin_console_router(api_pool, identity):
         actor = getattr(request.state, "auth_session", None)
         try:
             require_owner(actor, recent=recent, now=datetime.now(timezone.utc))
+            assert actor is not None  # require_owner validated the session
             allowed, retry = limiter.allow(f"admin-console:{actor.tenant_id}:{actor.user_id}:{request.method}",
                                           10 if recent else 90, 60)
             if not allowed:

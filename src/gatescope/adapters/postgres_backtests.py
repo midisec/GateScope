@@ -1,12 +1,15 @@
 """Research queue and frozen market/report snapshots."""
 from __future__ import annotations
 
+import builtins
+
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable
 from uuid import UUID, uuid4
 
 from psycopg.types.json import Jsonb
 
+from gatescope.adapters.postgres import required_row
 from gatescope.adapters.postgres import PostgresPool
 from gatescope.domain.market import Bar, TIMEFRAME_SECONDS
 from gatescope.quant.backtest import MAX_INDICATOR_BARS, StrategySpec, run_backtest
@@ -28,7 +31,7 @@ class BacktestRepository:
         return self.get(tenant, user, identifier)
 
     def list(self, tenant: UUID, user: UUID, *, limit: int = 50, offset: int = 0,
-             instrument: UUID | None = None, timeframe: str = "", screening: str = "", engine_mode: str = "") -> list[dict[str, Any]]:
+             instrument: UUID | None = None, timeframe: str = "", screening: str = "", engine_mode: str = "") -> builtins.list[dict[str, Any]]:
         with self.pool.transaction(tenant, user) as conn:
             rows = conn.execute(self._select() + " WHERE (%s::uuid IS NULL OR r.instrument_id=%s) AND (%s='' OR r.timeframe=%s) AND (%s='' OR coalesce(j.report_json->'screening'->>'status','UNASSESSED')=%s) AND (%s='' OR coalesce(r.spec_json->>'engine_mode','INDICATOR')=%s) ORDER BY r.created_at DESC,r.id DESC LIMIT %s OFFSET %s",
                 (instrument, instrument, timeframe, timeframe, screening, screening, engine_mode, engine_mode, max(1, min(limit, 101)), max(0, offset))).fetchall()
@@ -36,7 +39,7 @@ class BacktestRepository:
 
     def count(self, tenant: UUID, user: UUID, *, instrument: UUID | None = None, timeframe: str = "", screening: str = "", engine_mode: str = "") -> int:
         with self.pool.transaction(tenant, user) as conn:
-            return int(conn.execute("SELECT count(*) FROM research_backtests r LEFT JOIN research_backtest_results j ON j.run_id=r.id WHERE (%s::uuid IS NULL OR r.instrument_id=%s) AND (%s='' OR r.timeframe=%s) AND (%s='' OR coalesce(j.report_json->'screening'->>'status','UNASSESSED')=%s) AND (%s='' OR coalesce(r.spec_json->>'engine_mode','INDICATOR')=%s)", (instrument, instrument, timeframe, timeframe, screening, screening, engine_mode, engine_mode)).fetchone()[0])
+            return int(required_row(conn.execute("SELECT count(*) FROM research_backtests r LEFT JOIN research_backtest_results j ON j.run_id=r.id WHERE (%s::uuid IS NULL OR r.instrument_id=%s) AND (%s='' OR r.timeframe=%s) AND (%s='' OR coalesce(j.report_json->'screening'->>'status','UNASSESSED')=%s) AND (%s='' OR coalesce(r.spec_json->>'engine_mode','INDICATOR')=%s)", (instrument, instrument, timeframe, timeframe, screening, screening, engine_mode, engine_mode)).fetchone())[0])
 
     def get(self, tenant: UUID, user: UUID, identifier: UUID) -> dict[str, Any]:
         with self.pool.transaction(tenant, user) as conn:
@@ -78,7 +81,7 @@ class BacktestRepository:
                 SELECT count(*),min(open_time),max(close_time),
                   count(*) FILTER(WHERE available_at-close_time>=close_time-open_time) FROM snapshot""",
                 (instrument,timeframe,as_of,as_of,as_of,left,right)).fetchone()
-        count, first, last, delayed = row
+        count, first, last, delayed = required_row(row)
         expected = int((right-left).total_seconds()//step)+1
         internal = max(0, int((last-first).total_seconds()/step)-count) if count else 0
         return {"available_bars": count, "requested_bars": expected, "missing_bars": max(0,expected-count),
@@ -128,7 +131,7 @@ class BacktestRepository:
 
     def bars(self, instrument: UUID, timeframe: str, limit: int, as_of: datetime,
              start: datetime | None = None, end: datetime | None = None,
-             *, source_manifest: list[dict[str, Any]] | None = None) -> list[Bar]:
+             *, source_manifest: builtins.list[dict[str, Any]] | None = None) -> builtins.list[Bar]:
         if limit > 5000:
             raise ValueError("长历史回测需要分片存储，不能一次加载完整报告")
         with self.pool.public_transaction() as conn:
@@ -161,14 +164,14 @@ class BacktestRepository:
             request = self.get(tenant, user, identifier)
             spec = StrategySpec.model_validate(request["spec"])
             with self.pool.transaction(tenant, user) as conn:
-                trials = conn.execute("SELECT count(*) FROM research_backtests WHERE created_at<=%s", (request["created_at"],)).fetchone()[0]
-                trials += conn.execute("SELECT coalesce(sum(trial_count),0) FROM research_discovery_reports WHERE created_at<=%s", (request["created_at"],)).fetchone()[0]
+                trials = required_row(conn.execute("SELECT count(*) FROM research_backtests WHERE created_at<=%s", (request["created_at"],)).fetchone())[0]
+                trials += required_row(conn.execute("SELECT coalesce(sum(trial_count),0) FROM research_discovery_reports WHERE created_at<=%s", (request["created_at"],)).fetchone())[0]
             if request["bar_limit"] > 5000:
                 from gatescope.adapters.postgres_indicator_research import IndicatorResearchRepository
                 report = IndicatorResearchRepository(self.pool).run(request, tenant, user, spec,
                     trials=max(1,trials), progress=progress)
             else:
-                source_manifest: list[dict[str, Any]] = []
+                source_manifest: builtins.list[dict[str, Any]] = []
                 bars = self.bars(request["instrument_id"], request["timeframe"], request["bar_limit"], request["created_at"], request["from_time"], request["to_time"], source_manifest=source_manifest)
                 if spec.direction != "LONG" and bars and bars[0].market == "SPOT":
                     raise ValueError("现货回测只支持做多")

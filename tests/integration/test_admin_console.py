@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import base64
 import os
+import secrets
 import time
 from uuid import uuid4
 
@@ -12,7 +13,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from fastapi.testclient import TestClient
 from psycopg.conninfo import make_conninfo
-from urllib.parse import urlsplit, urlunsplit
+from urllib.parse import urlsplit
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from threading import Barrier
@@ -26,25 +27,26 @@ from gatescope.domain.identity import Role
 from gatescope.submission_crypto import encrypt_submission_for_test
 
 
-PASSWORD = "isolated-admin-test-" "password-2026"
+PASSWORD = secrets.token_urlsafe(32)
 
 
 def test_admin_lifecycle_isolation_and_encrypted_create(monkeypatch, migrated_database):
     tenant, other, owner, outsider = (uuid4() for _ in range(4))
     encoded = PasswordHasher(time_cost=2, memory_cost=19456, parallelism=1).hash(PASSWORD)
+    runtime_password = secrets.token_urlsafe(32)
     with psycopg.connect(migrated_database) as db:
         # Role is cluster-local to the isolated test instance. It has no RLS bypass.
         db.execute("""DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='admin_console_test_runtime')
           THEN CREATE ROLE admin_console_test_runtime LOGIN INHERIT; END IF; END $$""")
         db.execute("GRANT gatescope_api,gatescope_auth TO admin_console_test_runtime")
+        db.execute(psycopg.sql.SQL("ALTER ROLE admin_console_test_runtime PASSWORD {}").format(psycopg.sql.Literal(runtime_password)))
         for tid, slug, uid, username in ((tenant, "admin-a", owner, "admin-a-owner"), (other, "admin-b", outsider, "admin-b-owner")):
             db.execute("INSERT INTO tenants(id,slug,name,status,created_at,updated_at) VALUES(%s,%s,%s,'ACTIVE',now(),now())", (tid, slug, slug))
             db.execute("""INSERT INTO users(id,normalized_username,display_username,password_hash,status,mfa_required,password_changed_at,created_at,updated_at)
               VALUES(%s,%s,%s,%s,'ACTIVE',true,now(),now(),now())""", (uid, username, username, encoded))
             db.execute("INSERT INTO memberships(id,tenant_id,user_id,role,status,created_at,updated_at) VALUES(%s,%s,%s,'OWNER','ACTIVE',now(),now())", (uuid4(), tid, uid))
             db.execute("INSERT INTO watchlists(id,tenant_id,owner_user_id,name,created_at,updated_at) VALUES(%s,%s,%s,%s,now(),now())", (uuid4(), tid, uid, slug))
-    parsed = urlsplit(migrated_database)
-    runtime_url = urlunsplit((parsed.scheme, "admin_console_test_runtime@"+parsed.netloc.split("@")[-1], parsed.path, parsed.query, ""))
+    runtime_url = make_conninfo(migrated_database, user="admin_console_test_runtime", password=runtime_password)
     # Keep migration fixture's environment untouched through teardown.
     monkeypatch.setattr("apps.api.formal_app._database_url", lambda: runtime_url)
     for key, value in {"IDENTITY_KEK": b"k"*32, "RECOVERY_PEPPER": b"p"*32, "CURSOR_SIGNING_KEY": b"c"*32}.items():
@@ -130,7 +132,8 @@ def test_admin_lifecycle_isolation_and_encrypted_create(monkeypatch, migrated_da
         assert client.post("/api/v2/users", headers=headers, json=envelope()).status_code == 403
         concurrent_last_owner_check(migrated_database, runtime_url, tenant, encoded)
     # Restricted runtime role cannot see any tenant row without a context.
-    with psycopg.connect(make_conninfo(migrated_database, user="admin_console_test_runtime")) as db:
+    with psycopg.connect(runtime_url) as db:
+        assert db.execute("SELECT current_user").fetchone() == ("admin_console_test_runtime",)
         assert db.execute("SELECT count(*) FROM memberships").fetchone()[0] == 0
 
 

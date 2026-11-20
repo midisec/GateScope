@@ -11,7 +11,15 @@ fi
 container_id="$(docker create "$image_name")"
 trap 'docker rm -f "$container_id" >/dev/null 2>&1 || true' EXIT
 listing="$(docker export "$container_id" | tar -tf -)"
-if printf '%s\n' "$listing" | grep -E '(^|/)(\.git|\.env|data/[^.]|gatescope_executor|tests)(/|$)' >/dev/null; then
+# Dependency wheels and the base OS may ship their own tests. Check project
+# tests in the application tree, and reject repository secrets and execution
+# code everywhere in the image.
+if printf '%s\n' "$listing" | awk '
+  /(^|\/)(\.git|\.env|gatescope_executor)(\/|$)/ { found=1 }
+  /^app\/data\/.+/ { found=1 }
+  /^app\// && !/^app\/\.venv\// && /\/tests(\/|$)/ { found=1 }
+  END { exit !found }
+'; then
   echo "forbidden material found in API image" >&2
   exit 1
 fi
