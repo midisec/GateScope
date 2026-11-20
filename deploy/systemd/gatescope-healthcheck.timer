@@ -1,0 +1,14 @@
+[Unit]
+Description=Run GateScope self-healing check every minute
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=1min
+AccuracySec=10s
+RandomizedDelaySec=5s
+Persistent=true
+Unit=gatescope-healthcheck.service
+
+[Install]
+WantedBy=timers.target
+

@@ -1,0 +1,551 @@
+{
+  "migration": "0044_coinglass_queue_progress",
+  "backend_unit_tests": 1182,
+  "frontend_tests": 248,
+  "postgres_integration_tests": 14,
+  "cold_start": {
+    "kind": "DEDICATED_TEMPORARY_MCP_DEPLOYMENT_CHECK",
+    "cases": [
+      {
+        "symbol": "SOL_USDT",
+        "timeframe": "30m",
+        "ok": true,
+        "elapsed_seconds": 15.249,
+        "anonymous_status": 401,
+        "tool_count": 10,
+        "closed_bars": 100,
+        "indicator_count": 8,
+        "ready_indicators": 8,
+        "closed_age_seconds": 451.109828,
+        "quality_flags": [
+          "EXCHANGE_FINALITY_ASSUMED",
+          "HISTORICAL_BACKFILL",
+          "REST_POLLING"
+        ],
+        "realtime_status": "CURRENT",
+        "coinglass_status": "NOT_CACHED",
+        "coinglass_series": 0,
+        "coinglass_fetched_at": 0,
+        "coinglass_refresh_status": "NOT_CACHED",
+        "coinglass_refresh_state": "COLLECTING",
+        "coinglass_queue_age_seconds": 14,
+        "coinglass_cache_wait": {
+          "budget_seconds": 15,
+          "waited_seconds": 15.001,
+          "cache_reads": 15,
+          "inline_provider_calls": 0
+        },
+        "coinglass_availability": {
+          "available_metric_ids": [],
+          "ready_metric_ids": [],
+          "stale_metric_ids": [],
+          "unavailable_metric_ids": [
+            "oi",
+            "funding",
+            "lsr",
+            "liquidation_long",
+            "liquidation_short"
+          ],
+          "ready_count": 0,
+          "available_count": 0,
+          "total_count": 5,
+          "metrics": [
+            {
+              "id": "oi",
+              "label": "OI 持仓量",
+              "status": "NOT_AVAILABLE",
+              "usable_points": 0,
+              "reference_only": false,
+              "unit_status": "UNKNOWN",
+              "fetched_at": 0,
+              "as_of": null
+            },
+            {
+              "id": "funding",
+              "label": "资金费率",
+              "status": "NOT_AVAILABLE",
+              "usable_points": 0,
+              "reference_only": false,
+              "unit_status": "UNKNOWN",
+              "fetched_at": 0,
+              "as_of": null
+            },
+            {
+              "id": "lsr",
+              "label": "全账户多空比",
+              "status": "NOT_AVAILABLE",
+              "usable_points": 0,
+              "reference_only": false,
+              "unit_status": "UNKNOWN",
+              "fetched_at": 0,
+              "as_of": null
+            },
+            {
+              "id": "liquidation_long",
+              "label": "多单实际爆仓",
+              "status": "NOT_AVAILABLE",
+              "usable_points": 0,
+              "reference_only": false,
+              "unit_status": "UNKNOWN",
+              "fetched_at": 0,
+              "as_of": null
+            },
+            {
+              "id": "liquidation_short",
+              "label": "空单实际爆仓",
+              "status": "NOT_AVAILABLE",
+              "usable_points": 0,
+              "reference_only": false,
+              "unit_status": "UNKNOWN",
+              "fetched_at": 0,
+              "as_of": null
+            }
+          ],
+          "interpretation_policy": "REPORT_EACH_METRIC_SEPARATELY_STALE_IS_REFERENCE_ONLY_QUEUE_IS_NOT_DATA_AVAILABILITY"
+        },
+        "coinglass_refresh_requested": false,
+        "coinglass_retry_after_seconds": 0,
+        "coinglass_metrics": []
+      },
+      {
+        "symbol": "SOL_USDT",
+        "timeframe": "8h",
+        "ok": true,
+        "elapsed_seconds": 15.151,
+        "anonymous_status": 401,
+        "tool_count": 10,
+        "closed_bars": 100,
+        "indicator_count": 8,
+        "ready_indicators": 8,
+        "closed_age_seconds": 13066.302154,
+        "quality_flags": [
+          "EXCHANGE_FINALITY_ASSUMED",
+          "HISTORICAL_BACKFILL",
+          "REST_POLLING"
+        ],
+        "realtime_status": "CURRENT",
+        "coinglass_status": "NOT_CACHED",
+        "coinglass_series": 0,
+        "coinglass_fetched_at": 0,
+        "coinglass_refresh_status": "NOT_CACHED",
+        "coinglass_refresh_state": "COLLECTING",
+        "coinglass_queue_age_seconds": 14,
+        "coinglass_cache_wait": {
+          "budget_seconds": 15,
+          "waited_seconds": 15.001,
+          "cache_reads": 15,
+          "inline_provider_calls": 0
+        },
+        "coinglass_availability": {
+          "available_metric_ids": [],
+          "ready_metric_ids": [],
+          "stale_metric_ids": [],
+          "unavailable_metric_ids": [
+            "oi",
+            "funding",
+            "lsr",
+            "liquidation_long",
+            "liquidation_short"
+          ],
+          "ready_count": 0,
+          "available_count": 0,
+          "total_count": 5,
+          "metrics": [
+            {
+              "id": "oi",
+              "label": "OI 持仓量",
+              "status": "NOT_AVAILABLE",
+              "usable_points": 0,
+              "reference_only": false,
+              "unit_status": "UNKNOWN",
+              "fetched_at": 0,
+              "as_of": null
+            },
+            {
+              "id": "funding",
+              "label": "资金费率",
+              "status": "NOT_AVAILABLE",
+              "usable_points": 0,
+              "reference_only": false,
+              "unit_status": "UNKNOWN",
+              "fetched_at": 0,
+              "as_of": null
+            },
+            {
+              "id": "lsr",
+              "label": "全账户多空比",
+              "status": "NOT_AVAILABLE",
+              "usable_points": 0,
+              "reference_only": false,
+              "unit_status": "UNKNOWN",
+              "fetched_at": 0,
+              "as_of": null
+            },
+            {
+              "id": "liquidation_long",
+              "label": "多单实际爆仓",
+              "status": "NOT_AVAILABLE",
+              "usable_points": 0,
+              "reference_only": false,
+              "unit_status": "UNKNOWN",
+              "fetched_at": 0,
+              "as_of": null
+            },
+            {
+              "id": "liquidation_short",
+              "label": "空单实际爆仓",
+              "status": "NOT_AVAILABLE",
+              "usable_points": 0,
+              "reference_only": false,
+              "unit_status": "UNKNOWN",
+              "fetched_at": 0,
+              "as_of": null
+            }
+          ],
+          "interpretation_policy": "REPORT_EACH_METRIC_SEPARATELY_STALE_IS_REFERENCE_ONLY_QUEUE_IS_NOT_DATA_AVAILABILITY"
+        },
+        "coinglass_refresh_requested": false,
+        "coinglass_retry_after_seconds": 0,
+        "coinglass_metrics": []
+      }
+    ],
+    "temporary_client_revoked": true,
+    "revoked_http_status": 401,
+    "existing_clients_modified": false,
+    "openai_called": false,
+    "ok": true
+  },
+  "partial_stage": {
+    "kind": "DEDICATED_TEMPORARY_MCP_DEPLOYMENT_CHECK",
+    "cases": [
+      {
+        "symbol": "SOL_USDT",
+        "timeframe": "30m",
+        "ok": true,
+        "elapsed_seconds": 0.236,
+        "anonymous_status": 401,
+        "tool_count": 10,
+        "closed_bars": 100,
+        "indicator_count": 8,
+        "ready_indicators": 8,
+        "closed_age_seconds": 619.171268,
+        "quality_flags": [
+          "EXCHANGE_FINALITY_ASSUMED",
+          "HISTORICAL_BACKFILL",
+          "REST_POLLING"
+        ],
+        "realtime_status": "CURRENT",
+        "coinglass_status": "PARTIAL",
+        "coinglass_series": 5,
+        "coinglass_fetched_at": 1789299477,
+        "coinglass_refresh_status": "PARTIAL",
+        "coinglass_refresh_state": "SCHEDULED",
+        "coinglass_queue_age_seconds": 0,
+        "coinglass_cache_wait": {
+          "budget_seconds": 15,
+          "waited_seconds": 0.027,
+          "cache_reads": 1,
+          "inline_provider_calls": 0
+        },
+        "coinglass_availability": {
+          "available_metric_ids": [
+            "oi",
+            "lsr",
+            "liquidation_long",
+            "liquidation_short"
+          ],
+          "ready_metric_ids": [
+            "oi",
+            "lsr",
+            "liquidation_long",
+            "liquidation_short"
+          ],
+          "stale_metric_ids": [],
+          "unavailable_metric_ids": [
+            "funding"
+          ],
+          "ready_count": 4,
+          "available_count": 4,
+          "total_count": 5,
+          "metrics": [
+            {
+              "id": "oi",
+              "label": "OI 持仓量",
+              "status": "READY",
+              "usable_points": 255,
+              "reference_only": false,
+              "unit_status": "VERIFIED",
+              "fetched_at": 1789299465,
+              "as_of": 1789299000
+            },
+            {
+              "id": "funding",
+              "label": "资金费率",
+              "status": "MISMATCH",
+              "usable_points": 0,
+              "reference_only": false,
+              "unit_status": "UNKNOWN",
+              "fetched_at": 1789299477,
+              "as_of": null
+            },
+            {
+              "id": "lsr",
+              "label": "全账户多空比",
+              "status": "READY",
+              "usable_points": 255,
+              "reference_only": false,
+              "unit_status": "VERIFIED",
+              "fetched_at": 1789299471,
+              "as_of": 1789299000
+            },
+            {
+              "id": "liquidation_long",
+              "label": "多单实际爆仓",
+              "status": "READY",
+              "usable_points": 255,
+              "reference_only": false,
+              "unit_status": "VERIFIED",
+              "fetched_at": 1789299477,
+              "as_of": 1789299000
+            },
+            {
+              "id": "liquidation_short",
+              "label": "空单实际爆仓",
+              "status": "READY",
+              "usable_points": 255,
+              "reference_only": false,
+              "unit_status": "VERIFIED",
+              "fetched_at": 1789299477,
+              "as_of": 1789299000
+            }
+          ],
+          "interpretation_policy": "REPORT_EACH_METRIC_SEPARATELY_STALE_IS_REFERENCE_ONLY_QUEUE_IS_NOT_DATA_AVAILABILITY"
+        },
+        "coinglass_refresh_requested": true,
+        "coinglass_retry_after_seconds": 0,
+        "coinglass_metrics": [
+          {
+            "id": "oi",
+            "status": "READY",
+            "unit_status": "VERIFIED",
+            "points": 255
+          },
+          {
+            "id": "funding",
+            "status": "MISMATCH",
+            "unit_status": "UNKNOWN",
+            "points": 0
+          },
+          {
+            "id": "lsr",
+            "status": "READY",
+            "unit_status": "VERIFIED",
+            "points": 255
+          },
+          {
+            "id": "liquidation_long",
+            "status": "READY",
+            "unit_status": "VERIFIED",
+            "points": 255
+          },
+          {
+            "id": "liquidation_short",
+            "status": "READY",
+            "unit_status": "VERIFIED",
+            "points": 255
+          }
+        ]
+      },
+      {
+        "symbol": "SOL_USDT",
+        "timeframe": "8h",
+        "ok": true,
+        "elapsed_seconds": 0.209,
+        "anonymous_status": 401,
+        "tool_count": 10,
+        "closed_bars": 100,
+        "indicator_count": 8,
+        "ready_indicators": 8,
+        "closed_age_seconds": 13219.37817,
+        "quality_flags": [
+          "EXCHANGE_FINALITY_ASSUMED",
+          "HISTORICAL_BACKFILL",
+          "REST_POLLING"
+        ],
+        "realtime_status": "CURRENT",
+        "coinglass_status": "PARTIAL",
+        "coinglass_series": 5,
+        "coinglass_fetched_at": 1789299490,
+        "coinglass_refresh_status": "QUEUED",
+        "coinglass_refresh_state": "SCHEDULED",
+        "coinglass_queue_age_seconds": 0,
+        "coinglass_cache_wait": {
+          "budget_seconds": 15,
+          "waited_seconds": 0.016,
+          "cache_reads": 1,
+          "inline_provider_calls": 0
+        },
+        "coinglass_availability": {
+          "available_metric_ids": [
+            "oi",
+            "lsr"
+          ],
+          "ready_metric_ids": [
+            "oi",
+            "lsr"
+          ],
+          "stale_metric_ids": [],
+          "unavailable_metric_ids": [
+            "funding",
+            "liquidation_long",
+            "liquidation_short"
+          ],
+          "ready_count": 2,
+          "available_count": 2,
+          "total_count": 5,
+          "metrics": [
+            {
+              "id": "oi",
+              "label": "OI 持仓量",
+              "status": "READY",
+              "usable_points": 255,
+              "reference_only": false,
+              "unit_status": "VERIFIED",
+              "fetched_at": 1789299484,
+              "as_of": 1789286400
+            },
+            {
+              "id": "funding",
+              "label": "资金费率",
+              "status": "MISMATCH",
+              "usable_points": 0,
+              "reference_only": false,
+              "unit_status": "UNKNOWN",
+              "fetched_at": 1789299490,
+              "as_of": null
+            },
+            {
+              "id": "lsr",
+              "label": "全账户多空比",
+              "status": "READY",
+              "usable_points": 255,
+              "reference_only": false,
+              "unit_status": "VERIFIED",
+              "fetched_at": 1789299490,
+              "as_of": 1789286400
+            },
+            {
+              "id": "liquidation_long",
+              "label": "多单实际爆仓",
+              "status": "DEFERRED",
+              "usable_points": 0,
+              "reference_only": false,
+              "unit_status": "VERIFIED",
+              "fetched_at": 1789299490,
+              "as_of": null
+            },
+            {
+              "id": "liquidation_short",
+              "label": "空单实际爆仓",
+              "status": "DEFERRED",
+              "usable_points": 0,
+              "reference_only": false,
+              "unit_status": "VERIFIED",
+              "fetched_at": 1789299490,
+              "as_of": null
+            }
+          ],
+          "interpretation_policy": "REPORT_EACH_METRIC_SEPARATELY_STALE_IS_REFERENCE_ONLY_QUEUE_IS_NOT_DATA_AVAILABILITY"
+        },
+        "coinglass_refresh_requested": true,
+        "coinglass_retry_after_seconds": 0,
+        "coinglass_metrics": [
+          {
+            "id": "oi",
+            "status": "READY",
+            "unit_status": "VERIFIED",
+            "points": 255
+          },
+          {
+            "id": "funding",
+            "status": "MISMATCH",
+            "unit_status": "UNKNOWN",
+            "points": 0
+          },
+          {
+            "id": "lsr",
+            "status": "READY",
+            "unit_status": "VERIFIED",
+            "points": 255
+          },
+          {
+            "id": "liquidation_long",
+            "status": "DEFERRED",
+            "unit_status": "VERIFIED",
+            "points": 0
+          },
+          {
+            "id": "liquidation_short",
+            "status": "DEFERRED",
+            "unit_status": "VERIFIED",
+            "points": 0
+          }
+        ]
+      }
+    ],
+    "temporary_client_revoked": true,
+    "revoked_http_status": 401,
+    "existing_clients_modified": false,
+    "openai_called": false,
+    "ok": true
+  },
+  "final": {
+    "verified_at": "2026-09-13T11:44:07Z",
+    "cases": [
+      {
+        "symbol": "SOL_USDT",
+        "timeframe": "30m",
+        "elapsed_seconds": 0.208,
+        "coinglass_status": "PARTIAL",
+        "refresh_state": "COOLDOWN",
+        "retry_after_seconds": 1,
+        "fetched_at": 1789299477,
+        "ready_count": 4,
+        "ready_metric_ids": [
+          "oi",
+          "lsr",
+          "liquidation_long",
+          "liquidation_short"
+        ],
+        "points_per_ready_metric": 255,
+        "unavailable_metric_ids": [
+          "funding"
+        ]
+      },
+      {
+        "symbol": "SOL_USDT",
+        "timeframe": "8h",
+        "elapsed_seconds": 0.201,
+        "coinglass_status": "PARTIAL",
+        "refresh_state": "SCHEDULED",
+        "retry_after_seconds": 0,
+        "fetched_at": 1789299818,
+        "ready_count": 4,
+        "ready_metric_ids": [
+          "oi",
+          "lsr",
+          "liquidation_long",
+          "liquidation_short"
+        ],
+        "points_per_ready_metric": 255,
+        "unavailable_metric_ids": [
+          "funding"
+        ]
+      }
+    ],
+    "temporary_client_revoked": true,
+    "revoked_http_status": 401,
+    "existing_clients_modified": false,
+    "openai_called": false
+  }
+}

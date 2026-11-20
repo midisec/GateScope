@@ -1,0 +1,2 @@
+"""Chart worker composition root."""
+

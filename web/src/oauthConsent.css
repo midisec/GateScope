@@ -1,0 +1,35 @@
+.oauth-card { width: min(540px, 100%); }
+.oauth-brand { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.oauth-brand > a { color: inherit; font-size: 18px; font-weight: 700; text-decoration: none; }
+.oauth-card a { color: #91b7ff; text-underline-offset: 3px; }
+.oauth-card h1 { margin: 24px 0 10px; }
+.oauth-account { padding-bottom: 20px; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
+.oauth-account strong { color: #d1d4dc; margin-left: 6px; }
+.oauth-client { margin: 20px 0 16px; overflow-wrap: anywhere; }
+.oauth-permissions { display: grid; gap: 18px; padding: 0; margin: 0 0 22px; list-style: none; }
+.oauth-permissions li > label { display: flex; align-items: flex-start; gap: 12px; min-height: 44px; cursor: pointer; }
+.oauth-permissions input[type="checkbox"] { width: 18px; height: 18px; margin: 2px 0 0; flex: 0 0 18px; accent-color: #67d4bc; }
+.oauth-permissions li > label > span { min-width: 0; overflow-wrap: anywhere; }
+.oauth-permissions strong { font-size: 14px; }
+.oauth-permissions p { color: #9ca3b2; font-size: 13px; line-height: 1.6; margin: 5px 0 0; }
+.oauth-card .oauth-boundary { padding: 14px; border: 1px solid #305246; border-radius: 8px; background: #13332655; color: #a7d9c6; font-size: 13px; line-height: 1.7; }
+.oauth-card .oauth-revoke { font-size: 13px; line-height: 1.7; }
+.oauth-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 24px; }
+.oauth-actions button { min-height: 46px; }
+.oauth-card .oauth-notice { color: #a7d9c6; margin: 18px 0 0; line-height: 1.7; }
+.oauth-card .error-banner { line-height: 1.7; }
+.oauth-home { display: inline-block; margin-top: 16px; }
+.mcp-oauth-guide { margin: 16px 0 20px; padding: 20px; }
+.mcp-oauth-guide > header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+.mcp-oauth-guide h2 { margin: 0; }
+.mcp-oauth-guide ol { padding-left: 22px; line-height: 1.8; font-size: 14px; color: #a6adbb; }
+.mcp-oauth-address { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.mcp-oauth-address code { overflow-wrap: anywhere; min-width: 0; flex: 1 1 200px; }
+.mcp-oauth-guide p { margin: 14px 0 0; color: var(--muted); font-size: 13px; line-height: 1.7; }
+@media (max-width: 480px) {
+  .oauth-card { padding: 22px 18px; }
+  .oauth-actions { grid-template-columns: 1fr; }
+  .oauth-actions .primary { grid-row: 1; }
+  .mcp-oauth-guide { padding: 16px; }
+  .mcp-oauth-address button { min-height: 44px; }
+}

@@ -7,6 +7,7 @@ from __future__ import annotations
 import csv
 import io
 import json
+import logging
 import os
 import threading
 import time
@@ -14,12 +15,13 @@ import webbrowser
 from pathlib import Path
 from typing import Any, Literal, Optional
 
-import requests
 import uvicorn
-from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
+from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from database import Database
 from gate_client import GateClient, GateError, INTERVAL_SECONDS, MAX_HISTORY_POINTS
@@ -28,12 +30,19 @@ from scanner import BackgroundScanner
 from opportunity_scanner import OpportunityScanner
 
 
+from gatescope.auth import CSRF_COOKIE, SESSION_COOKIE, AuthService, InvalidCredentials
+from gatescope.config import RuntimeSettings
+from gatescope.migrations import upgrade_database
+from gatescope.observability import event as log_event
+from gatescope.security import SecurityMiddleware, SlidingWindowLimiter, error_response
+from apps.api.v2 import build_v2_router
+
 ROOT = Path(__file__).resolve().parent
 STATIC_DIR = ROOT / "static"
 DATA_DIR = ROOT / "data"
 CONFIG_PATH = ROOT / "config.json"
-DB_PATH = DATA_DIR / "gate_patterns.db"
 INDEX_PATH = STATIC_DIR / "index.html"
+LOGIN_PATH = STATIC_DIR / "login.html"
 VENDOR_PATH = STATIC_DIR / "vendor" / "lightweight-charts.standalone.production.js"
 VENDOR_URL = (
     "https://cdn.jsdelivr.net/npm/lightweight-charts@5.2.0/"
@@ -53,7 +62,7 @@ RANGES: dict[str, Optional[int]] = {
 }
 
 DEFAULT_CONFIG: dict[str, Any] = {
-    "proxy": "http://127.0.0.1:7890",
+    "proxy": "",
     "host": "127.0.0.1",
     "port": 8777,
     "open_browser": True,
@@ -74,16 +83,20 @@ def load_config() -> dict[str, Any]:
             if isinstance(loaded, dict):
                 config.update(loaded)
         except Exception as exc:
-            print("配置文件读取失败，将使用默认配置：", exc)
+            log_event("config.read_failed", level=logging.WARNING, error=type(exc).__name__)
     return config
 
 
+SETTINGS = RuntimeSettings.from_env(ROOT)
+DB_PATH = SETTINGS.db_path
 CONFIG = load_config()
 # 历史表现统计至少使用 5000 根 K 线，以获得更有参考价值的样本量。
 CONFIG["max_pattern_bars"] = max(5000, int(CONFIG.get("max_pattern_bars", 5000)))
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 (STATIC_DIR / "vendor").mkdir(parents=True, exist_ok=True)
 DB = Database(DB_PATH)
+upgrade_database(ROOT, DB_PATH)
+AUTH = AuthService(DB, SETTINGS.session_ttl_seconds)
 GATE = GateClient(str(CONFIG.get("proxy") or ""))
 SCANNER = BackgroundScanner(
     DB,
@@ -92,6 +105,9 @@ SCANNER = BackgroundScanner(
     catalog_refresh_seconds=int(CONFIG["catalog_refresh_seconds"]),
 )
 OPPORTUNITY = OpportunityScanner(DB, GATE, INTERVALS)
+RATE_LIMITER = SlidingWindowLimiter()
+LOGIN_LIMITER = SlidingWindowLimiter()
+STARTUP_STATE: dict[str, Any] = {"started": False, "ready": False, "reason": "starting"}
 
 
 def ensure_chart_library() -> None:
@@ -105,9 +121,9 @@ def ensure_chart_library() -> None:
         tmp = VENDOR_PATH.with_suffix(".tmp")
         tmp.write_bytes(response.content)
         tmp.replace(VENDOR_PATH)
-        print("已缓存 Lightweight Charts：", VENDOR_PATH)
+        log_event("chart_library.cached")
     except Exception as exc:
-        print("提示：图表库缓存失败，前端将尝试 CDN：", exc)
+        log_event("chart_library.cache_failed", level=logging.WARNING, error=type(exc).__name__)
 
 
 class WatchlistCreate(BaseModel):
@@ -184,30 +200,130 @@ class OpportunitySettingsUpdate(BaseModel):
     auto_seconds: int = Field(default=900, ge=300, le=86400)
 
 
-app = FastAPI(title="GateScope", version="1.0.0")
+app = FastAPI(title="GateScope", version="2.0.0-phase0", docs_url=None, redoc_url=None)
+app.add_middleware(
+    SecurityMiddleware,
+    auth=AUTH,
+    public_origin=SETTINGS.public_origin,
+    cookie_secure=SETTINGS.cookie_secure,
+    limiter=RATE_LIMITER,
+)
+app.include_router(build_v2_router(DB, AUTH))
 
 
 @app.on_event("startup")
 def startup() -> None:
-    threading.Thread(target=ensure_chart_library, daemon=True).start()
-    SCANNER.start()
-    OPPORTUNITY.start()
-    if DB.instrument_count() == 0:
-        threading.Thread(target=_initial_catalog_refresh, daemon=True).start()
+    STARTUP_STATE.update({"started": True, "ready": False, "reason": "auth_not_initialized"})
+    bootstrap_password = os.environ.pop("GATESCOPE_BOOTSTRAP_PASSWORD", None)
+    if AUTH.user_count() == 0 and SETTINGS.bootstrap_username and bootstrap_password:
+        AUTH.bootstrap(SETTINGS.bootstrap_username, bootstrap_password)
+    bootstrap_password = None
+    if AUTH.user_count() == 0:
+        log_event("startup.not_ready", reason="auth_not_initialized", level=logging.WARNING)
+        return
+    if not DB.healthcheck():
+        STARTUP_STATE["reason"] = "database_unavailable"
+        log_event("startup.not_ready", reason="database_unavailable", level=logging.ERROR)
+        return
+    STARTUP_STATE.update({"ready": True, "reason": None})
+    log_event(
+        "startup.ready",
+        execution_environment=SETTINGS.execution_environment.value,
+        live_trading_enabled=SETTINGS.live_trading_enabled,
+        workers_started=False,
+    )
 
 
 @app.on_event("shutdown")
 def shutdown() -> None:
-    OPPORTUNITY.stop()
-    SCANNER.stop()
+    STARTUP_STATE.update({"started": False, "ready": False, "reason": "stopped"})
 
 
 def _initial_catalog_refresh() -> None:
     try:
         count = SCANNER.refresh_catalog()
-        print(f"Gate 市场目录已初始化：{count} 个交易标的")
+        log_event("gate.catalog_initialized", instrument_count=count)
     except Exception as exc:
-        print("Gate 市场目录初始化失败：", exc)
+        log_event("gate.catalog_refresh_failed", level=logging.ERROR, error=str(exc))
+
+
+class LoginRequest(BaseModel):
+    username: str = Field(min_length=1, max_length=64)
+    password: str = Field(min_length=1, max_length=256)
+
+
+def safe_worker_status(raw: dict[str, Any]) -> dict[str, Any]:
+    allowed = {
+        "running", "last_cycle", "updated_instruments", "triggered_alerts", "run_id",
+        "started_at", "finished_at", "total_tasks", "completed_tasks", "current_label",
+        "heartbeat_at",
+    }
+    result = {key: value for key, value in raw.items() if key in allowed}
+    result["degraded"] = bool(raw.get("last_error"))
+    result["last_error"] = "依赖服务暂不可用" if raw.get("last_error") else None
+    return result
+
+
+def market_worker_status() -> dict[str, Any]:
+    persisted = DB.get_setting(BackgroundScanner.STATUS_SETTING_KEY, {})
+    raw = dict(persisted) if isinstance(persisted, dict) else {}
+    if not raw:
+        raw = dict(SCANNER.status)
+    heartbeat = int(raw.get("heartbeat_at") or 0)
+    stale_after = max(60, int(CONFIG["update_seconds"]) * 4)
+    if raw.get("running") and (not heartbeat or int(time.time()) - heartbeat > stale_after):
+        raw["running"] = False
+        raw["last_error"] = "market worker heartbeat is stale"
+    return safe_worker_status(raw)
+
+
+def safe_run(raw: Optional[dict[str, Any]]) -> Optional[dict[str, Any]]:
+    if raw is None:
+        return None
+    result = dict(raw)
+    result["error"] = "任务执行失败" if raw.get("error") else None
+    return result
+
+
+def safe_opportunity_results(payload: dict[str, Any]) -> dict[str, Any]:
+    result = dict(payload)
+    result["run"] = safe_run(payload.get("run"))
+    tasks = []
+    for raw in payload.get("tasks", []):
+        task = dict(raw)
+        task["error"] = "行情或计算依赖暂不可用" if raw.get("error") else None
+        tasks.append(task)
+    result["tasks"] = tasks
+    return result
+
+
+def upstream_unavailable(exc: Exception, operation: str) -> HTTPException:
+    log_event("upstream.request_failed", level=logging.WARNING, operation=operation, error=str(exc))
+    return HTTPException(502, "上游行情服务暂不可用，请稍后重试")
+
+
+@app.exception_handler(StarletteHTTPException)
+async def http_error(request: Request, exc: StarletteHTTPException) -> JSONResponse:
+    message = str(exc.detail) if exc.status_code < 500 else "服务暂不可用"
+    return error_response(exc.status_code, f"HTTP_{exc.status_code}", message, request.state.trace_id)
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error(request: Request, exc: RequestValidationError) -> JSONResponse:
+    log_event("http.validation_failed", trace_id=request.state.trace_id, path=request.url.path)
+    return error_response(422, "INVALID_REQUEST", "请求参数无效", request.state.trace_id)
+
+
+@app.exception_handler(Exception)
+async def unexpected_error(request: Request, exc: Exception) -> JSONResponse:
+    log_event(
+        "http.unexpected_error",
+        level=logging.ERROR,
+        trace_id=request.state.trace_id,
+        path=request.url.path,
+        error=type(exc).__name__,
+    )
+    return error_response(500, "INTERNAL_ERROR", "服务暂不可用", request.state.trace_id)
 
 
 def validate_interval(interval: str) -> str:
@@ -269,13 +385,14 @@ def ensure_candles(
     except GateError as exc:
         cached = DB.get_candles(instrument_id, interval, start_ts, end_ts, 20000)
         if not cached:
-            raise HTTPException(502, str(exc)) from exc
+            raise upstream_unavailable(exc, "candles.fetch") from exc
+        log_event("upstream.cache_fallback", level=logging.WARNING, operation="candles.fetch", error=str(exc))
         return {
             "instrument": instrument,
             "candles": cached,
             "truncated": truncated,
             "fetched": fetched,
-            "warning": f"实时更新失败，已返回本地缓存：{exc}",
+            "warning": "实时更新失败，已返回本地缓存",
         }
     candles = DB.get_candles(instrument_id, interval, start_ts, end_ts, 20000)
     return {
@@ -287,14 +404,116 @@ def ensure_candles(
     }
 
 
+@app.get("/health/live")
+def health_live() -> dict[str, Any]:
+    return {"status": "ok", "service": "gatescope-api"}
+
+
+@app.get("/health/ready")
+def health_ready(request: Request) -> JSONResponse:
+    database_ready = DB.healthcheck()
+    auth_ready = AUTH.user_count() > 0 if database_ready else False
+    ready = bool(STARTUP_STATE["ready"] and database_ready and auth_ready)
+    payload = {
+        "status": "ready" if ready else "not_ready",
+        "checks": {
+            "database": "ok" if database_ready else "unavailable",
+            "authentication": "ok" if auth_ready else "not_initialized",
+        },
+        "trading": {
+            "environment": SETTINGS.execution_environment.value,
+            "live_enabled": False,
+        },
+    }
+    return JSONResponse(payload, status_code=200 if ready else 503)
+
+
+@app.get("/login", response_model=None)
+def login_page(request: Request) -> Any:
+    if request.state.auth_session is not None:
+        return RedirectResponse("/", status_code=303)
+    return FileResponse(LOGIN_PATH)
+
+
+@app.post("/auth/login")
+def login(payload: LoginRequest, request: Request) -> JSONResponse:
+    trace_id = request.state.trace_id
+    client_key = request.client.host if request.client else "unknown"
+    allowed, retry_after = LOGIN_LIMITER.allow(f"login:{client_key}", 10, 600)
+    if not allowed:
+        return error_response(
+            429,
+            "LOGIN_RATE_LIMITED",
+            "登录尝试过多，请稍后重试",
+            trace_id,
+            **{"Retry-After": str(retry_after)},
+        )
+    if AUTH.user_count() == 0:
+        return error_response(503, "AUTH_NOT_INITIALIZED", "服务尚未完成安全初始化", trace_id)
+    try:
+        new_session = AUTH.authenticate(payload.username, payload.password, trace_id)
+    except InvalidCredentials:
+        return error_response(401, "INVALID_CREDENTIALS", "账号或密码错误", trace_id)
+
+    response = JSONResponse(
+        {
+            "user": {
+                "id": new_session.authenticated.user_id,
+                "username": new_session.authenticated.username,
+                "role": new_session.authenticated.role,
+            },
+            "expires_at": new_session.authenticated.expires_at,
+        }
+    )
+    response.set_cookie(
+        SESSION_COOKIE,
+        new_session.token,
+        max_age=SETTINGS.session_ttl_seconds,
+        secure=SETTINGS.cookie_secure,
+        httponly=True,
+        samesite="strict",
+        path="/",
+    )
+    response.set_cookie(
+        CSRF_COOKIE,
+        new_session.csrf_token,
+        max_age=SETTINGS.session_ttl_seconds,
+        secure=SETTINGS.cookie_secure,
+        httponly=False,
+        samesite="strict",
+        path="/",
+    )
+    return response
+
+
+@app.get("/auth/me")
+def auth_me(request: Request) -> dict[str, Any]:
+    session = request.state.auth_session
+    return {
+        "user": {"id": session.user_id, "username": session.username, "role": session.role},
+        "expires_at": session.expires_at,
+    }
+
+
+@app.post("/auth/logout")
+def logout(request: Request) -> JSONResponse:
+    AUTH.revoke(request.state.auth_session.session_id, request.state.trace_id)
+    response = JSONResponse({"ok": True})
+    response.delete_cookie(SESSION_COOKIE, path="/", secure=SETTINGS.cookie_secure, httponly=True, samesite="strict")
+    response.delete_cookie(CSRF_COOKIE, path="/", secure=SETTINGS.cookie_secure, httponly=False, samesite="strict")
+    return response
+
+
 @app.get("/")
 def index() -> FileResponse:
     return FileResponse(INDEX_PATH)
 
 
 @app.get("/api/bootstrap")
-def bootstrap() -> dict[str, Any]:
+def bootstrap(request: Request) -> dict[str, Any]:
+    session = request.state.auth_session
     return {
+        "user": {"id": session.user_id, "username": session.username, "role": session.role},
         "pattern_catalog": PATTERN_CATALOG,
         "intervals": INTERVALS,
         "ranges": list(RANGES),
@@ -302,11 +521,11 @@ def bootstrap() -> dict[str, Any]:
         "alert_rules": DB.list_alert_rules(),
         "unread_alerts": DB.unread_alert_count(),
         "instrument_count": DB.instrument_count(),
-        "scanner": SCANNER.status,
+        "scanner": market_worker_status(),
         "opportunity": {
             "settings": OPPORTUNITY.get_settings(),
-            "status": OPPORTUNITY.status,
-            "latest_run": DB.latest_opportunity_run(),
+            "status": safe_worker_status(OPPORTUNITY.status),
+            "latest_run": safe_run(DB.latest_opportunity_run()),
         },
         "config": {
             "default_interval": CONFIG["default_interval"],
@@ -314,19 +533,25 @@ def bootstrap() -> dict[str, Any]:
             "default_watch_refresh_seconds": CONFIG["default_watch_refresh_seconds"],
             "proxy_enabled": bool(CONFIG.get("proxy")),
         },
+        "runtime": {
+            "environment": SETTINGS.execution_environment.value,
+            "live_trading_enabled": False,
+            "authorization_mode": "NONE",
+        },
     }
 
 
 @app.get("/api/status")
 def status() -> dict[str, Any]:
     return {
-        "scanner": SCANNER.status,
+        "scanner": market_worker_status(),
         "instrument_count": DB.instrument_count(),
         "watchlist_count": len(DB.list_watchlist()),
         "unread_alerts": DB.unread_alert_count(),
-        "opportunity": OPPORTUNITY.status,
-        "latest_opportunity_run": DB.latest_opportunity_run(),
-        "database": str(DB_PATH),
+        "opportunity": safe_worker_status(OPPORTUNITY.status),
+        "latest_opportunity_run": safe_run(DB.latest_opportunity_run()),
+        "dependencies": {"database": "ok" if DB.healthcheck() else "unavailable"},
+        "runtime": {"environment": SETTINGS.execution_environment.value, "live_trading_enabled": False},
     }
 
 
@@ -348,7 +573,7 @@ def refresh_instruments() -> dict[str, Any]:
     try:
         count = SCANNER.refresh_catalog()
     except GateError as exc:
-        raise HTTPException(502, str(exc)) from exc
+        raise upstream_unavailable(exc, "catalog.refresh") from exc
     return {"ok": True, "updated": count, "catalog_count": DB.instrument_count()}
 
 
@@ -576,17 +801,17 @@ def run_opportunity_scan() -> dict[str, Any]:
 @app.get("/api/opportunities/status")
 def opportunity_status() -> dict[str, Any]:
     latest = DB.latest_opportunity_run()
-    return {"status": OPPORTUNITY.status, "latest_run": latest}
+    return {"status": safe_worker_status(OPPORTUNITY.status), "latest_run": safe_run(latest)}
 
 
 @app.get("/api/opportunities/results")
 def opportunity_results(run_id: Optional[int] = Query(default=None, ge=1)) -> dict[str, Any]:
-    return DB.opportunity_results(run_id)
+    return safe_opportunity_results(DB.opportunity_results(run_id))
 
 
 @app.get("/api/opportunities/runs")
 def opportunity_runs(limit: int = Query(default=20, ge=1, le=100)) -> list[dict[str, Any]]:
-    return DB.list_opportunity_runs(limit)
+    return [safe_run(row) for row in DB.list_opportunity_runs(limit) if row is not None]
 
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")

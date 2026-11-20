@@ -5,18 +5,19 @@
 from __future__ import annotations
 
 import hashlib
-import json
 import threading
 import time
 from collections import defaultdict
 from typing import Any, Callable, Optional
 
 from database import Database
-from gate_client import GateClient, GateError, INTERVAL_SECONDS
-from pattern_engine import CATALOG_BY_ID, scan_patterns
+from gate_client import GateClient, INTERVAL_SECONDS
+from pattern_engine import scan_patterns
 
 
 class BackgroundScanner:
+    STATUS_SETTING_KEY = "market_worker_status"
+
     def __init__(
         self,
         db: Database,
@@ -47,7 +48,7 @@ class BackgroundScanner:
         if self._thread and self._thread.is_alive():
             return
         self._stop.clear()
-        self._thread = threading.Thread(target=self._run, name="gate-pattern-scanner", daemon=True)
+        self._thread = threading.Thread(target=self.run_forever, name="gate-pattern-scanner", daemon=True)
         self._thread.start()
 
     def stop(self) -> None:
@@ -60,6 +61,12 @@ class BackgroundScanner:
         self._wake.set()
 
     def _emit(self) -> None:
+        self.status["heartbeat_at"] = int(time.time())
+        try:
+            self.db.set_setting(self.STATUS_SETTING_KEY, self.status)
+        except Exception:
+            # 行情更新本身优先；短暂的 SQLite 竞争不应终止 worker。
+            pass
         if self.on_status:
             try:
                 self.on_status(dict(self.status))
@@ -72,7 +79,7 @@ class BackgroundScanner:
         self._last_catalog = int(time.time())
         return count
 
-    def _run(self) -> None:
+    def run_forever(self) -> None:
         self.status["running"] = True
         self._emit()
         while not self._stop.is_set():

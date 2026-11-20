@@ -1,0 +1,2 @@
+"""Notification worker composition root."""
+

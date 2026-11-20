@@ -1,0 +1,13 @@
+[Unit]
+Description=Inspect GateScope storage every fifteen minutes without writes
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=15min
+AccuracySec=30s
+RandomizedDelaySec=30s
+Persistent=true
+Unit=gatescope-storage-health.service
+
+[Install]
+WantedBy=timers.target

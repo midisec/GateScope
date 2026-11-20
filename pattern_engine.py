@@ -12,7 +12,7 @@ from __future__ import annotations
 import hashlib
 import math
 from dataclasses import dataclass
-from typing import Any, Callable, Iterable, Optional, Sequence
+from typing import Any, Optional, Sequence
 
 import numpy as np
 import pandas as pd
@@ -64,6 +64,9 @@ class ScanContext:
     lows: list[Pivot]
     atr: np.ndarray
     median_price: float
+    latest_only: bool = False
+    precision_mode: bool = False
+    preserve_candidates: bool = False
 
 
 def clamp(value: float, low: float = 0.0, high: float = 1.0) -> float:
@@ -197,7 +200,7 @@ def detect_double_patterns(ctx: ScanContext, pattern_id: str) -> list[dict[str, 
     primary = ctx.highs if is_top else ctx.lows
     opposite = ctx.lows if is_top else ctx.highs
     events: list[dict[str, Any]] = []
-    for first, second in zip(primary, primary[1:]):
+    for first, second in zip(primary, primary[1:], strict=False):
         gap = second.index - first.index
         if gap < 6 or gap > 120:
             continue
@@ -209,7 +212,10 @@ def detect_double_patterns(ctx: ScanContext, pattern_id: str) -> list[dict[str, 
         similarity = abs(first.price - second.price) / max(mean_level, 1e-12)
         depth = (mean_level - middle.price) / mean_level if is_top else (middle.price - mean_level) / mean_level
         atr_ratio = abs(mean_level - middle.price) / max(ctx.atr[middle.index], mean_level * 0.002)
-        if similarity > 0.045 or depth < 0.012 or atr_ratio < 1.2:
+        local_atr = max(float(ctx.atr[middle.index]), mean_level * 1e-8)
+        tolerance = .75 * local_atr / mean_level if ctx.precision_mode else .045
+        minimum_depth = 1.5 * local_atr / mean_level if ctx.precision_mode else .012
+        if similarity > tolerance or depth < minimum_depth or (not ctx.precision_mode and atr_ratio < 1.2):
             continue
         after = closes_after(ctx, second.index, 30)
         if is_top:
@@ -218,8 +224,8 @@ def detect_double_patterns(ctx: ScanContext, pattern_id: str) -> list[dict[str, 
             hits = np.where(after > middle.price)[0]
         confirmed = len(hits) > 0
         end_index = second.index + int(hits[0]) + 1 if confirmed else second.index
-        similarity_score = 1 - similarity / 0.045
-        depth_score = clamp((depth - 0.012) / 0.10)
+        similarity_score = 1 - similarity / tolerance
+        depth_score = clamp(depth * mean_level / (6 * local_atr)) if ctx.precision_mode else clamp((depth - 0.012) / 0.10)
         confidence = 0.45 * similarity_score + 0.35 * depth_score + 0.20 * float(confirmed)
         pts = [
             point(int(ctx.df.iloc[first.index].time), first.price, "1"),
@@ -254,7 +260,9 @@ def detect_triple_patterns(ctx: ScanContext, pattern_id: str) -> list[dict[str, 
         levels = np.array([p1.price, p2.price, p3.price])
         mean_level = float(levels.mean())
         dispersion = float((levels.max() - levels.min()) / max(mean_level, 1e-12))
-        if dispersion > 0.055:
+        local_atr = max(float(ctx.atr[p3.index]),mean_level*1e-8)
+        tolerance = local_atr/mean_level if ctx.precision_mode else .055
+        if dispersion > tolerance:
             continue
         m1s = extrema_between(opposite, p1.index, p2.index)
         m2s = extrema_between(opposite, p2.index, p3.index)
@@ -264,13 +272,13 @@ def detect_triple_patterns(ctx: ScanContext, pattern_id: str) -> list[dict[str, 
         m2 = min(m2s, key=lambda p: p.price) if is_top else max(m2s, key=lambda p: p.price)
         neckline = min(m1.price, m2.price) if is_top else max(m1.price, m2.price)
         depth = (mean_level - neckline) / mean_level if is_top else (neckline - mean_level) / mean_level
-        if depth < 0.014:
+        if depth < (1.5*local_atr/mean_level if ctx.precision_mode else .014):
             continue
         after = closes_after(ctx, p3.index, 35)
         hits = np.where(after < neckline)[0] if is_top else np.where(after > neckline)[0]
         confirmed = len(hits) > 0
         end_index = p3.index + int(hits[0]) + 1 if confirmed else p3.index
-        confidence = 0.4 * (1 - dispersion / 0.055) + 0.4 * clamp(depth / 0.10) + 0.2 * float(confirmed)
+        confidence = 0.4 * (1 - dispersion / tolerance) + 0.4 * clamp(depth / (6*local_atr/mean_level if ctx.precision_mode else .10)) + 0.2 * float(confirmed)
         pivots = [p1, m1, p2, m2, p3]
         pts = [point(int(ctx.df.iloc[p.index].time), p.price, str(j + 1) if p.kind == primary[0].kind else "N") for j, p in enumerate(pivots)]
         lines = [line(pts[j], pts[j + 1]) for j in range(len(pts) - 1)]
@@ -296,7 +304,9 @@ def detect_head_shoulders(ctx: ScanContext, pattern_id: str) -> list[dict[str, A
             shoulder_mean = (left.price + right.price) / 2
         dominance_ratio = head_dominance / max(shoulder_mean, 1e-12)
         shoulder_diff = abs(left.price - right.price) / max(shoulder_mean, 1e-12)
-        if dominance_ratio < 0.012 or shoulder_diff > 0.065:
+        local_atr = max(float(ctx.atr[head.index]),shoulder_mean*1e-8)
+        shoulder_tolerance = 1.25*local_atr/shoulder_mean if ctx.precision_mode else .065
+        if dominance_ratio < (local_atr/shoulder_mean if ctx.precision_mode else .012) or shoulder_diff > shoulder_tolerance:
             continue
         between1 = extrema_between(neck_pivots, left.index, head.index)
         between2 = extrema_between(neck_pivots, head.index, right.index)
@@ -315,9 +325,9 @@ def detect_head_shoulders(ctx: ScanContext, pattern_id: str) -> list[dict[str, A
         confirmed = bool(hits)
         end_index = right.index + hits[0] if confirmed else right.index
         confidence = (
-            0.35 * clamp(dominance_ratio / 0.08)
-            + 0.30 * (1 - shoulder_diff / 0.065)
-            + 0.15 * clamp(1 - abs(n1.price - n2.price) / max(shoulder_mean * 0.08, 1e-12))
+            0.35 * clamp(dominance_ratio / (4*local_atr/shoulder_mean if ctx.precision_mode else .08))
+            + 0.30 * (1 - shoulder_diff / shoulder_tolerance)
+            + 0.15 * clamp(1 - abs(n1.price - n2.price) / max(4*local_atr if ctx.precision_mode else shoulder_mean * 0.08, 1e-12))
             + 0.20 * float(confirmed)
         )
         pivots = [left, n1, head, n2, right]
@@ -382,7 +392,7 @@ def detect_boundaries(ctx: ScanContext, selected: set[str]) -> list[dict[str, An
         return []
     n = len(ctx.df)
     events: list[dict[str, Any]] = []
-    candidate_ends = sorted(set(list(range(60, n, max(6, n // 150 or 6))) + [n - 1]))
+    candidate_ends = [n - 1] if ctx.latest_only else sorted(set(list(range(60, n, max(6, n // 150 or 6))) + [n - 1]))
     for end in candidate_ends:
         for length in (45, 70, 100, 140):
             start = end - length + 1
@@ -413,6 +423,12 @@ def detect_boundaries(ctx: ScanContext, selected: set[str]) -> list[dict[str, An
             span = end - start
             flat_threshold = 0.00012
             slope_threshold = 0.00010
+            if ctx.precision_mode:
+                volatility = max(float(ctx.atr[end]),base*1e-8)
+                flat_threshold = .20*volatility/(base*span)
+                slope_threshold = .35*volatility/(base*span)
+                if min(width_start,width_end)<1.5*volatility:
+                    continue
 
             pattern_id = ""
             confirmed = False
@@ -463,12 +479,13 @@ def detect_boundaries(ctx: ScanContext, selected: set[str]) -> list[dict[str, An
                 score = 0.55 * fit + 0.25 * clamp((abs(hs_n) + abs(ls_n)) * span / 0.12) + 0.20 * clamp(1 - abs(width_end / width_start - 1))
                 note = "平行下降通道"
 
-            if pattern_id and pattern_id in wanted and score >= 0.48:
+            if pattern_id and pattern_id in wanted and (ctx.precision_mode or score >= 0.48):
                 events.append(boundary_event(
                     ctx, pattern_id, start, end, highs, lows, score, confirmed, note,
                     signal_direction=signal_direction,
                 ))
-                break
+                if not ctx.preserve_candidates:
+                    break
     return events
 
 
@@ -481,7 +498,7 @@ def detect_flags(ctx: ScanContext, selected: set[str]) -> list[dict[str, Any]]:
     low = ctx.df["low"].to_numpy(float)
     n = len(ctx.df)
     events: list[dict[str, Any]] = []
-    for end in sorted(set(list(range(35, n, 5)) + [n - 1])):
+    for end in ([n - 1] if ctx.latest_only else sorted(set(list(range(35, n, 5)) + [n - 1]))):
         for cons_len in (10, 14, 20, 26):
             cons_start = end - cons_len + 1
             if cons_start < 15:
@@ -489,8 +506,8 @@ def detect_flags(ctx: ScanContext, selected: set[str]) -> list[dict[str, Any]]:
             pole_start = max(0, cons_start - min(24, max(10, cons_len)))
             pole_move = close[cons_start - 1] - close[pole_start]
             pole_pct = pole_move / max(close[pole_start], 1e-12)
-            pole_atr = abs(pole_move) / max(float(np.mean(ctx.atr[pole_start:cons_start])), close[pole_start] * 0.002)
-            if abs(pole_pct) < 0.045 or pole_atr < 3.0:
+            pole_atr = abs(pole_move) / max(float(np.mean(ctx.atr[pole_start:cons_start])), close[pole_start] * (1e-8 if ctx.precision_mode else .002))
+            if (not ctx.precision_mode and abs(pole_pct) < 0.045) or pole_atr < 3.0:
                 continue
             highs = [p for p in ctx.highs if cons_start <= p.index <= end]
             lows = [p for p in ctx.lows if cons_start <= p.index <= end]
@@ -509,10 +526,16 @@ def detect_flags(ctx: ScanContext, selected: set[str]) -> list[dict[str, Any]]:
             is_bull = pole_move > 0
             parallel = abs(hs - ls) <= max(abs(hs), abs(ls), ctx.median_price * 1e-5) * 0.55
             converging = width_start > 0 and width_end > 0 and width_end < width_start * 0.72
+            slope_tolerance = ctx.median_price * .0002
+            if ctx.precision_mode:
+                # A fixed percent per candle lets large wrong-way flags through
+                # on quiet markets. Normalize the full consolidation drift.
+                slope_tolerance = .2*float(ctx.atr[end])/max(1,cons_len-1)
+                parallel = abs(hs-ls)*(cons_len-1) <= max(.5*float(ctx.atr[end]), .25*width_start)
             pattern_id = ""
-            if is_bull and parallel and hs <= ctx.median_price * 0.0002 and ls <= ctx.median_price * 0.0002:
+            if is_bull and parallel and hs <= slope_tolerance and ls <= slope_tolerance:
                 pattern_id = "bull_flag"
-            elif (not is_bull) and parallel and hs >= -ctx.median_price * 0.0002 and ls >= -ctx.median_price * 0.0002:
+            elif (not is_bull) and parallel and hs >= -slope_tolerance and ls >= -slope_tolerance:
                 pattern_id = "bear_flag"
             elif is_bull and converging and hs < 0 < ls:
                 pattern_id = "bull_pennant"
@@ -533,8 +556,9 @@ def detect_flags(ctx: ScanContext, selected: set[str]) -> list[dict[str, Any]]:
             l2 = point(int(ctx.df.iloc[end].time), lower_end, "L")
             pts = [pole_p1, pole_p2] + [point(int(ctx.df.iloc[p.index].time), p.price) for p in highs[-4:] + lows[-4:]]
             lines = [line(pole_p1, pole_p2), line(h1, h2), line(l1, l2)]
-            events.append(make_event(ctx, pattern_id, pole_start, end, score, confirmed, pts, lines, note="旗杆后缩量整理"))
-            break
+            events.append(make_event(ctx, pattern_id, pole_start, end, score, confirmed, pts, lines, note="旗杆后价格整理；成交量须另行验证" if ctx.precision_mode else "旗杆后缩量整理"))
+            if not ctx.preserve_candidates:
+                break
     return events
 
 
@@ -543,7 +567,7 @@ def detect_cup_handle(ctx: ScanContext, pattern_id: str) -> list[dict[str, Any]]
     close = ctx.df["close"].to_numpy(float)
     n = len(close)
     events: list[dict[str, Any]] = []
-    for end in sorted(set(list(range(70, n, 10)) + [n - 1])):
+    for end in ([n - 1] if ctx.latest_only else sorted(set(list(range(70, n, 10)) + [n - 1]))):
         for length in (60, 90, 130, 180, 240):
             start = end - length + 1
             if start < 0:
@@ -554,6 +578,9 @@ def detect_cup_handle(ctx: ScanContext, pattern_id: str) -> list[dict[str, Any]]
             handle = window[cup_end_local - 1 :]
             rim_band = max(3, int(length * 0.08))
             left_level = float(np.mean(cup[:rim_band]))
+            left_local = (int(np.argmin(cup[:rim_band])) if inverse else int(np.argmax(cup[:rim_band]))) if ctx.precision_mode else rim_band//2
+            if ctx.precision_mode:
+                left_level = float(cup[left_local])
             right_slice_start = max(rim_band, cup_end_local - rim_band * 2)
             right_segment = cup[right_slice_start:cup_end_local]
             right_local = right_slice_start + (int(np.argmin(right_segment)) if inverse else int(np.argmax(right_segment)))
@@ -564,7 +591,9 @@ def detect_cup_handle(ctx: ScanContext, pattern_id: str) -> list[dict[str, Any]]
             similarity = abs(left_level - right_level) / max(abs(rim), 1e-12)
             depth = (extreme - rim) / rim if inverse else (rim - extreme) / rim
             center = extreme_local / max(cup_end_local - 1, 1)
-            if similarity > 0.07 or depth < 0.045 or not (0.22 <= center <= 0.72):
+            local_atr = max(float(ctx.atr[end]),abs(rim)*1e-8)
+            rim_tolerance = 1.25*local_atr/abs(rim) if ctx.precision_mode else .07
+            if similarity > rim_tolerance or depth < (3*local_atr/abs(rim) if ctx.precision_mode else .045) or not (0.22 <= center <= 0.72):
                 continue
             if inverse:
                 handle_extreme_local = int(np.argmax(handle))
@@ -576,11 +605,11 @@ def detect_cup_handle(ctx: ScanContext, pattern_id: str) -> list[dict[str, Any]]
                 confirmed = window[-1] > max(left_level, right_level)
             if handle_pullback < 0 or handle_pullback > abs(depth * rim) * 0.62:
                 continue
-            shape_score = 1 - similarity / 0.07
+            shape_score = 1 - similarity / rim_tolerance
             center_score = 1 - abs(center - 0.47) / 0.30
             handle_score = 1 - handle_pullback / max(abs(depth * rim) * 0.62, 1e-12)
-            confidence = 0.32 * shape_score + 0.28 * clamp(depth / 0.18) + 0.20 * clamp(center_score) + 0.12 * clamp(handle_score) + 0.08 * float(confirmed)
-            left_idx = start + rim_band // 2
+            confidence = 0.32 * shape_score + 0.28 * clamp(depth / (10*local_atr/abs(rim) if ctx.precision_mode else .18)) + 0.20 * clamp(center_score) + 0.12 * clamp(handle_score) + 0.08 * float(confirmed)
+            left_idx = start + left_local
             extreme_idx = start + extreme_local
             right_idx = start + right_local
             handle_idx = start + cup_end_local - 1 + handle_extreme_local
@@ -593,7 +622,8 @@ def detect_cup_handle(ctx: ScanContext, pattern_id: str) -> list[dict[str, Any]]
             ]
             lines = [line(pts[j], pts[j + 1]) for j in range(len(pts) - 1)]
             events.append(make_event(ctx, pattern_id, start, end, confidence, confirmed, pts, lines, note="U形主体与较浅手柄"))
-            break
+            if not ctx.preserve_candidates:
+                break
     return events
 
 
@@ -632,7 +662,7 @@ def detect_elliott(ctx: ScanContext, pattern_id: str) -> list[dict[str, Any]]:
             continue
         retrace2 = safe_div(w2, w1)
         retrace4 = safe_div(w4, w3)
-        if not (0.15 <= retrace2 <= 0.88 and 0.12 <= retrace4 <= 0.75):
+        if not ctx.precision_mode and not (0.15 <= retrace2 <= 0.88 and 0.12 <= retrace4 <= 0.75):
             continue
         duration_balance = min(
             seq[3].index - seq[2].index,
@@ -682,22 +712,23 @@ def detect_elliott_correction(ctx: ScanContext, pattern_id: str) -> list[dict[st
         if span < 10 or span > 180:
             continue
         p0, pa, pb, pc = [p.price for p in seq]
+        a_atr = max(float(ctx.atr[seq[1].index]),abs(p0)*1e-8)
         if bullish:
             wave_a = p0 - pa
             wave_b = pb - pa
             wave_c = pb - pc
-            structural = p0 > pb > pa and pc < pb and pc <= pa * 1.015
+            structural = p0 > pb > pa and pc < pb and pc <= (pa+.25*a_atr if ctx.precision_mode else pa*1.015)
         else:
             wave_a = pa - p0
             wave_b = pa - pb
             wave_c = pc - pb
-            structural = p0 < pb < pa and pc > pb and pc >= pa * 0.985
+            structural = p0 < pb < pa and pc > pb and pc >= (pa-.25*a_atr if ctx.precision_mode else pa*.985)
         if not structural or wave_a <= 0 or wave_b <= 0 or wave_c <= 0:
             continue
         a_pct = wave_a / max(abs(p0), 1e-12)
         retrace_b = safe_div(wave_b, wave_a)
         extension_c = safe_div(wave_c, wave_a)
-        if a_pct < 0.025 or not (0.22 <= retrace_b <= 0.88) or not (0.55 <= extension_c <= 2.0):
+        if (wave_a<1.5*a_atr if ctx.precision_mode else a_pct<.025) or (not ctx.precision_mode and (not (0.22 <= retrace_b <= 0.88) or not (0.55 <= extension_c <= 2.0))):
             continue
         duration_a = seq[1].index - seq[0].index
         duration_b = seq[2].index - seq[1].index
@@ -708,7 +739,7 @@ def detect_elliott_correction(ctx: ScanContext, pattern_id: str) -> list[dict[st
         confirmed = confirm_idx is not None
         end_idx = confirm_idx if confirm_idx is not None else seq[3].index
         ratio_score = 0.5 * clamp(1 - abs(retrace_b - 0.5) / 0.5) + 0.5 * clamp(1 - abs(extension_c - 1.0) / 1.0)
-        confidence = 0.34 * clamp(a_pct / 0.12) + 0.30 * ratio_score + 0.18 * duration_balance + 0.18 * float(confirmed)
+        confidence = 0.34 * clamp(wave_a/(6*a_atr) if ctx.precision_mode else a_pct/.12) + 0.30 * ratio_score + 0.18 * duration_balance + 0.18 * float(confirmed)
         labels = ["0", "A", "B", "C"]
         pts = [point(int(ctx.df.iloc[pv.index].time), pv.price, labels[j]) for j, pv in enumerate(seq)]
         lines = [line(pts[j], pts[j + 1]) for j in range(3)]
@@ -754,22 +785,30 @@ def detect_elliott_cycle(ctx: ScanContext, pattern_id: str) -> list[dict[str, An
         if span < 35 or span > 420:
             continue
         prices = [p.price for p in seq]
-        if not _valid_impulse_prices(prices[:6], bullish):
+        if ctx.precision_mode:
+            from gatescope.quant.pattern_study import strict_impulse
+            impulse_valid = strict_impulse(prices[:6], bullish, guidelines=False)
+        else:
+            impulse_valid = _valid_impulse_prices(prices[:6], bullish)
+        if not impulse_valid:
             continue
         p5, pa, pb, pc = prices[5], prices[6], prices[7], prices[8]
         impulse_size = abs(p5 - prices[0])
+        a_atr = max(float(ctx.atr[seq[6].index]), abs(p5)*1e-8)
         if bullish:
-            structural = p5 > pb > pa and pc < pb and pc <= pa * 1.02 and pc > prices[0]
+            structural = p5 > pb > pa and pc < pb and pc <= (pa+.25*a_atr if ctx.precision_mode else pa*1.02) and pc > prices[0]
             wave_a, wave_b, wave_c = p5 - pa, pb - pa, pb - pc
         else:
-            structural = p5 < pb < pa and pc > pb and pc >= pa * 0.98 and pc < prices[0]
+            structural = p5 < pb < pa and pc > pb and pc >= (pa-.25*a_atr if ctx.precision_mode else pa*.98) and pc < prices[0]
             wave_a, wave_b, wave_c = pa - p5, pa - pb, pc - pb
         if not structural or min(wave_a, wave_b, wave_c) <= 0:
             continue
         retrace_total = abs(p5 - pc) / max(impulse_size, 1e-12)
         b_ratio = safe_div(wave_b, wave_a)
         c_ratio = safe_div(wave_c, wave_a)
-        if not (0.18 <= retrace_total <= 0.88 and 0.20 <= b_ratio <= 0.90 and 0.50 <= c_ratio <= 2.10):
+        if ctx.precision_mode and wave_a < 1.5*a_atr:
+            continue
+        if not ctx.precision_mode and not (0.18 <= retrace_total <= 0.88 and 0.20 <= b_ratio <= 0.90 and 0.50 <= c_ratio <= 2.10):
             continue
         trigger = pc + 0.236 * (pb - pc)
         confirm_idx = _future_confirmation_index(ctx, seq[8].index, trigger, bullish=bullish, bars=24)
@@ -996,6 +1035,10 @@ def scan_patterns(
     max_events_per_pattern: int = 20,
     include_statistics: bool = False,
     performance_horizons: Sequence[int] = (5, 10, 20, 50),
+    pivot_order: Optional[int] = None,
+    latest_only: bool = False,
+    precision_mode: bool = False,
+    preserve_candidates: bool = False,
 ) -> dict[str, Any]:
     df = normalize_frame(candles)
     if len(df) > max_bars:
@@ -1007,13 +1050,18 @@ def scan_patterns(
             empty["performance"] = calculate_historical_performance(df, [], performance_horizons)
         return empty
 
-    highs, lows = find_pivots(df)
+    if pivot_order is not None and not 2 <= pivot_order <= 8:
+        raise ValueError("pivot_order must be between 2 and 8")
+    highs, lows = find_pivots(df, order=pivot_order)
     ctx = ScanContext(
         df=df,
         highs=highs,
         lows=lows,
         atr=calculate_atr(df),
         median_price=float(df["close"].median()),
+        latest_only=latest_only,
+        precision_mode=precision_mode,
+        preserve_candidates=preserve_candidates,
     )
     events: list[dict[str, Any]] = []
 
@@ -1049,12 +1097,14 @@ def scan_patterns(
         events.extend(detect_elliott_cycle(ctx, "elliott_cycle_bear"))
 
     history_limit = max(max_events_per_pattern, 160) if include_statistics else max_events_per_pattern
-    all_events = deduplicate(events, max_events_per_pattern=history_limit)
+    # Lifecycle consumers own stable-anchor identities and bounded persistence.
+    # Time-nearness is not identity: nested/overlapping valid structures survive.
+    all_events = list(events) if preserve_candidates else deduplicate(events, max_events_per_pattern=history_limit)
     all_events = [
         event for event in all_events
         if event["confidence"] >= min_confidence and (event["confirmed"] or not confirmed_only)
     ]
-    display_events = _limit_events_per_pattern(all_events, max_events_per_pattern)
+    display_events = all_events if preserve_candidates else _limit_events_per_pattern(all_events, max_events_per_pattern)
     latest_time = int(df.iloc[-1].time)
     result = {
         "events": display_events,

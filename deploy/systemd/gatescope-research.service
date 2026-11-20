@@ -1,0 +1,43 @@
+[Unit]
+Description=GateScope isolated historical research worker
+After=network-online.target postgresql.service
+Wants=network-online.target
+Requires=postgresql.service
+StartLimitIntervalSec=300
+StartLimitBurst=20
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/workspace/crypto_gate_trade
+EnvironmentFile=/home/ubuntu/workspace/crypto_gate_trade/data/runtime-secrets/formal-strategy.env
+Environment=GATESCOPE_RESEARCH_WORKER_ID=formal-research-primary
+Environment=PYTHONUNBUFFERED=1
+Environment=LIVE_TRADING_ENABLED=false
+Environment=GATESCOPE_EXECUTION_ENVIRONMENT=PAPER
+ExecStart=/home/ubuntu/workspace/crypto_gate_trade/.venv/bin/python -m apps.research_worker.main
+Nice=10
+CPUQuota=100%
+MemoryHigh=512M
+MemoryMax=768M
+Restart=always
+RestartSec=5
+TimeoutStopSec=30
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=read-only
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+LockPersonality=true
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+CapabilityBoundingSet=
+AmbientCapabilities=
+
+[Install]
+WantedBy=multi-user.target

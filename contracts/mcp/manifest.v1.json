@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "transport": "STREAMABLE_HTTP",
+  "auth_profile": "SCOPED_SERVICE_TOKEN_V1",
+  "tools": [
+    {
+      "name": "market_search_instruments",
+      "required_scope": "market:read",
+      "read_only": true
+    },
+    {
+      "name": "market_get_candles",
+      "required_scope": "market:read",
+      "read_only": true
+    },
+    {
+      "name": "indicator_get_snapshot",
+      "required_scope": "analysis:read",
+      "read_only": true
+    },
+    {
+      "name": "alert_rule_list",
+      "required_scope": "alerts:read",
+      "read_only": true
+    },
+    {
+      "name": "signal_list",
+      "required_scope": "analysis:read",
+      "read_only": true
+    },
+    {
+      "name": "signal_explain",
+      "required_scope": "analysis:read",
+      "read_only": true
+    },
+    {
+      "name": "trade_get_status",
+      "required_scope": "analysis:read",
+      "read_only": true
+    },
+    {
+      "name": "trade_get_timeline",
+      "required_scope": "analysis:read",
+      "read_only": true
+    }
+  ]
+}

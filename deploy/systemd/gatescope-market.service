@@ -1,0 +1,37 @@
+[Unit]
+Description=GateScope formal Gate market-data worker
+After=network-online.target postgresql.service
+Wants=network-online.target
+Requires=postgresql.service
+StartLimitIntervalSec=300
+StartLimitBurst=20
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/workspace/crypto_gate_trade
+EnvironmentFile=/home/ubuntu/workspace/crypto_gate_trade/data/runtime-secrets/formal-market.env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/home/ubuntu/workspace/crypto_gate_trade/.venv/bin/market-worker
+Restart=always
+RestartSec=3
+TimeoutStopSec=180
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/ubuntu/workspace/crypto_gate_trade/data/market-archives
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+LockPersonality=true
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+CapabilityBoundingSet=
+AmbientCapabilities=
+
+[Install]
+WantedBy=multi-user.target

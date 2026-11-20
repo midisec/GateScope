@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "baseline": "v1.json",
+  "forbidden_without_new_major": [
+    "remove-path",
+    "remove-method",
+    "remove-response-status",
+    "add-required-request-field"
+  ]
+}
+

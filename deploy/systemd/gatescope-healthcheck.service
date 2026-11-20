@@ -1,0 +1,23 @@
+[Unit]
+Description=GateScope endpoint and workload self-healing check
+After=network-online.target nginx.service gatescope-api.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/home/ubuntu/workspace/crypto_gate_trade/scripts/gatescope_healthcheck.sh
+RuntimeDirectory=gatescope-healthcheck
+RuntimeDirectoryMode=0700
+RuntimeDirectoryPreserve=yes
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=read-only
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+LockPersonality=true
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6

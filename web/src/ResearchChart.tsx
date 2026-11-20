@@ -1,0 +1,1 @@
+export { ResearchChart } from "./LinkedResearchChart";

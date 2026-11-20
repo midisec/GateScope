@@ -1,7 +1,32 @@
+.env
+.env.*
+!.env.example
+*.env
 .venv/
 __pycache__/
 *.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+web/node_modules/
+web/dist/
+web/*.tsbuildinfo
+
+# Runtime state and credentials must never enter version control.
+data/*
+!data/.gitkeep
+artifacts/
+*.db
+*.db-shm
+*.db-wal
+*.sqlite*
+*.log
+
+# Local tool/editor and archive metadata.
 .DS_Store
-data/*.db
-data/*.db-*
-static/vendor/lightweight-charts.standalone.production.js
+__MACOSX/
+.idea/
+.vscode/
+web/.gatescope-build-*/

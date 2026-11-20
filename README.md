@@ -2,11 +2,20 @@
 
 > Gate 市场形态研究与机会扫描工作台
 
-GateScope 是一款本地优先的 Gate 市场研究 Web 应用。它从 Gate 公共 API 获取现货与永续合约行情，将 K 线增量缓存到 SQLite，并把图表形态识别、历史方向验证、多标的多周期机会筛选和浏览器告警整合到一个工作台中。
+GateScope 包含兼容的本地 SQLite 研究应用，以及正在生产化的 PostgreSQL/Timescale V2。V2 已落地正式账号/MFA/RLS、版本化配置与告警、React 行情工作台、Telegram 通知控制面、面向 Codex 的只读 MCP 研究服务、不可变证据驱动的 PAPER 提案/确认/交易事件账本，以及 Gate TESTNET 凭据接入和受限订单/原生保护演练闭环。
 
-项目不连接账户、不读取 API Key，也不执行真实交易。所有“可做”“胜率”和“置信度”均为研究指标，不构成投资建议。
+项目只接受 Gate TESTNET 凭据。2026-09-12 按用户要求取消夏普>1.5、回撤<15%、命中率>55%、t>2.0及其关联样本量的四项部署前置限制，改为 `performance-observation-2` 观察指标；不再按这四项淘汰。既有19项独立研究证据校验、有效执行认证、OWNER/MFA、账户安全确认、冻结条款和执行保护仍保留，并不自动开启实盘。认证聚合与不可变落库已实现，但上游 nested walk-forward/bootstrap/DSR/PBO 统计工件生产器尚未实现，所以正常产品路径默认不产生订单。系统不接受 LIVE 账户或 LIVE host。当前改动见 [绩效观察与事件修复](docs/v2/32_EVENT_REPAIRS_AND_PERFORMANCE_OBSERVATION.md)；[原策略筛选报告](docs/v2/23_STRATEGY_DISCOVERY_AND_ADMISSION.md) 保留历史研究结果，不再代表当前四项部署政策。
+
+> [!WARNING]
+> 当前版本仍不具备生产实盘资格。`LIVE_TRADING_ENABLED=true` 会使 executor 启动失败；订单 workload 只允许明确的 `TESTNET`。交易所私钥只可通过 Web 提交给 encrypt-only admission，API 仅持有 wrapping 公钥，隔离 validator/executor 才持有私钥；不得放入源码或 API 环境。PostgreSQL 与真实 Gate TESTNET 联调门禁仍须在预发布环境执行。
 
 ## 目录
+
+当前部署（2026-09-11）：[新服务器工作台](https://43.108.44.74/markets/chart)。原账号和验证器不变；迁移核对、资源限制、续期与回退信息见 [部署记录](docs/v2/21_SERVER_MIGRATION_20260911.md)。实盘限制仍以本文顶部说明为准。
+
+2026-09-24 容量治理已部署：可用空间约 0.90 → 3.95 GiB，修复目录重复版本增长，保留实时行情和告警，暂停历史批量计算。执行与恢复边界见 [容量回收与实时优先治理](docs/v2/56_CAPACITY_RECOVERY_AND_REALTIME.md)。
+
+最新形态/波浪改进、覆盖数量对照与绘图验收：[V3.1 修正记录](docs/v2/26_STRUCTURE_COVERAGE_AND_GEOMETRY.md)。
 
 - [核心能力](#核心能力)
 - [工作原理](#工作原理)
@@ -17,6 +26,7 @@ GateScope 是一款本地优先的 Gate 市场研究 Web 应用。它从 Gate �
 - [配置说明](#配置说明)
 - [Docker 与云端部署](#docker-与云端部署)
 - [项目结构](#项目结构)
+- [V2 生产化规划](#v2-生产化规划)
 - [功能进度（Todo List）](#功能进度todo-list)
 - [限制与风险提示](#限制与风险提示)
 
@@ -104,7 +114,7 @@ flowchart TD
 
 ### 环境要求
 
-- Python 3.9 或更高版本，推荐 Python 3.11 / 3.12
+- Python 3.10 或更高版本，推荐 Python 3.12
 - 可访问 Gate 公共 API；受网络环境限制时可在 `config.json` 中配置 HTTP 或 SOCKS5 代理
 - 首次加载图表时需要获取 TradingView Lightweight Charts™；程序会优先将其缓存到 `static/vendor/`
 
@@ -132,7 +142,8 @@ chmod +x setup.command run.command
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install -r requirements.txt
+python -m pip install -e .
+gatescope-admin create-owner --username owner
 python app.py
 ```
 
@@ -143,6 +154,8 @@ Windows PowerShell 激活虚拟环境时，将第三行替换为：
 ```
 
 默认访问地址：<http://127.0.0.1:8777>
+
+`gatescope-admin` 会在终端中安全读取至少 16 字节的密码，不接受把密码写在命令参数中。无人值守的首次部署可由秘密管理器临时注入 `GATESCOPE_BOOTSTRAP_USERNAME` 与 `GATESCOPE_BOOTSTRAP_PASSWORD`；创建首个 OWNER 后应移除这两个环境变量。
 
 ## 使用指南
 
@@ -245,6 +258,13 @@ Windows PowerShell 激活虚拟环境时，将第三行替换为：
 | `HOST` | 服务监听地址 |
 | `PORT` | 服务端口 |
 | `NO_BROWSER=1` | 启动后不自动打开浏览器 |
+| `GATESCOPE_DB_PATH` | SQLite 路径，默认 `data/gate_patterns.db` |
+| `GATESCOPE_PUBLIC_ORIGIN` | 浏览器允许的精确 Origin，例如 `https://research.example.com` |
+| `GATESCOPE_COOKIE_SECURE` | HTTPS 部署必须为 `1` |
+| `GATESCOPE_START_WORKERS` | Web API 固定为 `false`；行情与研究任务使用独立 worker 进程 |
+| `LIVE_TRADING_ENABLED` | 所有阶段必须为 `false`，其他值使 executor 启动失败 |
+| `GATESCOPE_EXECUTION_ENVIRONMENT` | API/validator 使用 `PAPER`；受限订单 worker 只接受 `TESTNET` |
+| `GATESCOPE_EXECUTOR_WORKLOAD` | `credential-validation` 或显式 `gate-testnet-execution` |
 
 ## 本地数据
 
@@ -256,28 +276,34 @@ Windows PowerShell 激活虚拟环境时，将第三行替换为：
 - 机会扫描设置、运行记录与任务状态
 - 当前机会明细和历史回测摘要
 
-删除数据库会清空以上本地数据。运行中的 SQLite 还可能生成 `-wal` 和 `-shm` 文件；备份时应先停止服务，或使用 SQLite 的一致性备份方式。
+删除数据库会清空以上本地数据。使用 `python scripts/backup_sqlite.py` 可执行 SQLite 在线一致性备份、源码/数据库 SHA-256 记录和隔离恢复校验；产物写入被 Git 忽略的 `artifacts/baseline/`。
 
 ## Docker 与云端部署
+
+本节只描述带 Phase 0 登录的研究部署，不代表实盘生产就绪。正式互联网入口仍应配合 TLS、受控防火墙/身份代理、秘密管理、备份和监控。
 
 ### Docker Compose
 
 ```bash
+export GATESCOPE_BOOTSTRAP_USERNAME=owner
+export GATESCOPE_BOOTSTRAP_PASSWORD='从秘密管理器读取的长随机密码'
 docker compose up -d --build
 ```
 
-启动后访问 <http://127.0.0.1:8777>，`./data` 会挂载到容器的 `/app/data`。
+Compose 仅发布到宿主机 loopback。镜像使用显式文件白名单和非 root UID，排除 `.git`、`.env`、`data/`、测试、文档与 private executor；Compose 同时启用只读根文件系统、`no-new-privileges`、删除 Linux capabilities，并只把 `./data` 挂为持久可写目录。首个 OWNER 创建后，从部署环境移除 bootstrap 密码。
 
 > Docker 容器内的 `127.0.0.1:7890` 指向容器自身。macOS / Windows Docker Desktop 可尝试 `http://host.docker.internal:7890`；云端部署通常应清空本地代理设置。
 
 ### Render 或其他容器平台
 
-仓库提供 `render.yaml`。云端运行时应注意：
+`render.yaml` 要求在平台秘密管理中填写 `GATESCOPE_BOOTSTRAP_PASSWORD`，启用安全 Cookie，并以 `/health/ready` 为就绪探针。它仍仅用于研究工作负载。云端运行还应注意：
 
 - GitHub Pages 只能托管静态文件，不能运行 FastAPI 和 SQLite；
 - SQLite 需要持久磁盘，否则重启或重新部署可能丢失数据；
 - 多实例部署不适合直接共享单个 SQLite 文件，需改用外部数据库或保持单实例；
-- 应将 `HOST` 设为 `0.0.0.0`，并由平台注入 `PORT`。
+- 对外必须使用 HTTPS；`GATESCOPE_PUBLIC_ORIGIN` 必须与浏览器访问源精确一致；
+- 容器启动后检查 `/health/ready`，未初始化 OWNER 时该端点返回 `503`；
+- SQLite 阶段只运行一个应用实例，多实例与正式租户隔离留到 Phase 1 PostgreSQL/RLS。
 
 ## 项目结构
 
@@ -295,8 +321,13 @@ gate_scanner/
 │   ├── styles.css          # 页面样式
 │   └── vendor/             # 本地缓存的 Lightweight Charts
 ├── data/                   # SQLite 数据文件
+├── src/gatescope/          # Phase 0 领域模式、配置、认证、安全与可观测性
+├── migrations/             # Alembic 迁移
+├── contracts/              # OpenAPI、事件、WS、MCP 与外部脱敏 fixture
+├── tests/                  # 单元、黄金、契约、集成与安全测试
+├── deploy/                 # 独立镜像和默认拒绝网络策略骨架
 ├── config.json             # 本地运行配置
-├── requirements.txt        # Python 依赖
+├── pyproject.toml / uv.lock# 工程定义与锁定依赖
 ├── setup.command           # macOS 首次安装与启动
 ├── run.command             # macOS 日常启动
 ├── run.bat                 # Windows 安装与启动
@@ -315,6 +346,16 @@ gate_scanner/
 
 第三方组件说明见 [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md)。
 
+## V2 生产化规划
+
+面向登录鉴权、Telegram、Coinglass/LSR、MCP、概率决策、可靠下单、交易所侧止盈止损和不可变交易证据的实施规格，见 [docs/v2/README.md](./docs/v2/README.md)。
+
+当前单机 PostgreSQL/Timescale 正式栈的入口、systemd 服务、自选实时更新和 Secret 配置方式见 [正式单机部署 Runbook](./docs/runbooks/FORMAL_SINGLE_HOST.md)。
+
+本轮同源长历史回测、通知影子账本、冻结净结果及滚动对照的实现与边界见 [同源研究与影子账本](./docs/v2/35_SAME_ENGINE_RESEARCH_AND_SHADOW_LEDGER.md)。以下原型进度不替代该正式实施记录。
+
+该规划明确区分当前启发式形态分、经过样本外校准的障碍结果概率、独立净盈利概率与净期望。完成无前视回测、成本/滑点、风险、幂等、保护单、对账、影子盘和模拟盘门禁前，不应把当前“可做”结果接入实盘。
+
 ## 功能进度（Todo List）
 
 ### 已完成
@@ -330,14 +371,25 @@ gate_scanner/
 - [x] 推荐观察周期、信号年龄和综合评分
 - [x] 自选行情后台更新与图表形态告警
 - [x] 浏览器通知、声音提醒和告警历史
-- [x] macOS、Windows、Docker 和 Render 部署支持
+- [x] macOS、Windows、Docker 和 Render 单实例研究运行支持
+- [x] V2 Phase 0：临时单 OWNER 登录、Argon2id、哈希会话、CSRF、锁定/限流、安全头与审计
+- [x] V2 Phase 0：Alembic、锁定依赖、CI/契约/黄金测试、备份恢复与非 root 镜像基线
+- [x] Gate TESTNET 凭据 Web 接入：RSA/AES envelope、公私钥工作负载隔离、版本轮换、停用和只读连接验证
+- [x] Gate TESTNET 机械执行内核：MFA 解锁、冻结条款、IOC 价格保护、原生 reduce-only SL/TP、UNKNOWN 对账、失败降险与持续保护监控（受 LIVE_ELIGIBLE 认证硬门禁锁定）
+- [x] 量化验证基础：事件唯一性、残余设计效应、循环 block bootstrap、Holm、EV 功效、purged/embargo walk-forward、论文公式 DSR/CSCV-PBO 与 23 项 LIVE eligibility 聚合/不可变落库；研究报告新增日净值 HAC 夏普/t 与严格筛选（完整统计工件生产器仍待实现）
 
 ### 待办
 
-- [ ] **用户登录机制**：加入用户注册、登录、会话管理和数据隔离，为多用户部署提供基础。
-- [ ] **系统配置设置**：提供可视化配置页面，统一管理网络代理、数据刷新频率、扫描任务、默认阈值和通知选项。
+下面是当前原型的摘要清单，不是 V2 的完整实施顺序；安全依赖、阶段门禁和逐项验收以 [V2 实施 Backlog](./docs/v2/04_DATA_API_IMPLEMENTATION.md#7-分阶段实施任务) 为准。
+
+- [x] **正式身份与租户（后端）**：PostgreSQL FORCE RLS、users/memberships、RBAC、MFA、恢复码和会话管理已落地；OWNER 管理页面与真实 PostgreSQL 门禁仍待完善/执行。
+- [x] **正式运行与数据源状态**：PostgreSQL/Timescale、按工作负载拆分的 Secret、systemd 自启、OWNER 数据源状态页、自选订阅和最近 K 线轮询已落地；普通偏好统一设置页仍待补齐。
 - [ ] **完整回测系统**：在现有形态方向统计之外，支持策略规则、进出场条件、手续费、滑点、资金费率、权益曲线和回测报告。
-- [ ] **接口开仓机制**：接入 Gate 私有交易接口，支持模拟盘验证、授权控制、仓位限制、止盈止损、审计日志和紧急停用。该功能默认关闭，并在完善安全与风控后提供。
+- [ ] **接口开仓机制**：受限 Gate TESTNET 机械代码闭环、19 项独立证据校验和不可变认证落库已完成；四项绩效门槛已撤销。持续对账、部分减仓处理与共享保护预算已补齐；上游统计工件生产器、真实权限证明、真实 Gate TESTNET 联调、WebSocket 成交流、长期故障注入和 shadow/soak 验收仍待执行。认证为空时 Web 禁止提交，LIVE 不存在允许路径。
+- [x] **Telegram 通知控制面**：可视化私聊绑定、MFA 确认、路由配置、测试推送与可靠 delivery worker 已落地；交易确认、完整静默/digest/三级限流、查询与急停仍依赖 PAPER OMS。
+- [ ] **Coinglass/LSR 与 GOD**：point-in-time 数据接入、概率校准、成本后净期望、样本外验证和组合风险门禁。
+- [x] **MCP/Codex 只读面**：Streamable HTTP、hash-only scoped token、Web OWNER/MFA 管理、行情/K 线/指标/告警读取与不可变摘要审计已落地；proposal 建议等待 PAPER Risk/OMS。
+- [ ] **交易证据与事件图**：冻结当时 K 线/指标/版本，追加订单与后续走势，支持 Web、TG 和 MCP 查询。
 
 ## 限制与风险提示
 
@@ -346,4 +398,4 @@ gate_scanner/
 3. 形态识别和波浪划分具有主观性，实验性波浪算法尤其需要人工复核。
 4. 样本内回测存在过拟合、样本重叠和市场状态变化风险，历史方向一致率不能外推为未来胜率。
 5. 实盘还会受到流动性、手续费、滑点、资金费率、延迟和风险控制影响，本项目未模拟全部因素。
-6. 项目不包含交易所账户接入、仓位管理或真实下单功能。
+6. 项目包含默认关闭的 Gate TESTNET 私有订单演练，不包含 LIVE 账户或真实资金操作；当前开发机没有执行真实 PostgreSQL/Gate TESTNET 集成门禁，不能把单元测试等同为交易所验收。

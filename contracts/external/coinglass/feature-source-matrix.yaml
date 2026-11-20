@@ -1,0 +1,50 @@
+schema_version: 1
+provider_origin: https://vip2.coinglass.site:443
+status: CHART_CONTEXT_AUTHORIZED_NOT_VALIDATED_ALPHA
+authorization:
+  evidence: USER_ATTESTATION_2026_09_13
+  scope: bounded_chart_cache_derived_reviews_authorized_mcp
+  isolation: config_owner_only
+sources:
+  - source_id: coinglass.gate_chart_context.v1
+    endpoints:
+      - /api/futures/supported-exchange-pairs
+      - /api/futures/open-interest/history
+      - /api/futures/funding-rate/history
+      - /api/futures/global-long-short-account-ratio/history
+      - /api/futures/liquidation/history
+    source_time_semantics: NATIVE_PERIOD_WITH_COLLECTION_AVAILABLE_AT
+    license_class: USER_ATTESTED_PLATFORM_RESEARCH
+    raw_persistence_allowed: true
+    persistence_policy: LATEST_256_NATIVE_PERIODS_AND_IMMUTABLE_REVIEWS
+    derived_feature_allowed: true
+    telegram_redistribution_allowed: false
+    mcp_redistribution_allowed: true
+    automatic_feature_eligible: false
+    funding_rate_unit_status: UNKNOWN_QUARANTINED
+  - source_id: coinglass.coins_markets.v1
+    endpoint: /api/futures/coins-markets
+    required_capability_ids: []
+    source_time_semantics: UNKNOWN
+    publication_cadence: UNKNOWN
+    quota_cost: UNKNOWN
+    priority: scheduled
+    license_class: UNKNOWN
+    raw_persistence_allowed: false
+    derived_feature_allowed: false
+    telegram_redistribution_allowed: false
+    mcp_redistribution_allowed: false
+    automatic_feature_eligible: false
+  - source_id: lsr.trader_signal.v1
+    endpoint: /api/lsr/signal/{symbol}?mode=trader
+    required_capability_ids: []
+    source_time_semantics: UNKNOWN
+    publication_cadence: UNKNOWN
+    quota_cost: UNKNOWN
+    priority: interactive
+    license_class: UNKNOWN
+    raw_persistence_allowed: false
+    derived_feature_allowed: false
+    telegram_redistribution_allowed: false
+    mcp_redistribution_allowed: false
+    automatic_feature_eligible: false

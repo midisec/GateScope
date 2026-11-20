@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "responses": {
+    "/spot/currencies": [
+      {"currency": "BTC", "name": "Bitcoin"},
+      {"currency": "USDT", "name": "Tether"}
+    ],
+    "/spot/currency_pairs": [
+      {"id": "BTC_USDT", "base": "BTC", "quote": "USDT", "trade_status": "tradable"}
+    ],
+    "/futures/usdt/contracts": [
+      {"name": "BTC_USDT", "in_delisting": false}
+    ],
+    "/futures/btc/contracts": []
+  },
+  "expected": [
+    {"id": "spot::BTC_USDT", "market": "spot", "symbol": "BTC_USDT", "status": "tradable"},
+    {"id": "futures:usdt:BTC_USDT", "market": "futures", "symbol": "BTC_USDT", "status": "tradable"}
+  ]
+}
+

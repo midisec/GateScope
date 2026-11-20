@@ -4,8 +4,10 @@
 
 from __future__ import annotations
 
-import math
 import time
+import math
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from typing import Any, Iterable, Optional
 
 import requests
@@ -34,10 +36,17 @@ class GateError(RuntimeError):
     pass
 
 
+class GateRateLimited(GateError):
+    def __init__(self, retry_after: float):
+        super().__init__("Gate API 请求限流")
+        self.retry_after = max(1.0, retry_after)
+
+
 class GateClient:
-    def __init__(self, proxy: str = "", timeout: tuple[int, int] = (10, 35)) -> None:
+    def __init__(self, proxy: str = "", timeout: tuple[int, int] = (10, 35), *, retries: int = 5) -> None:
         self.proxy = self._normalize_proxy(proxy)
         self.timeout = timeout
+        self.retries = max(0, min(retries, 5))
         self.session = self._build_session()
 
     @staticmethod
@@ -49,9 +58,9 @@ class GateClient:
 
     def _build_session(self) -> requests.Session:
         retry = Retry(
-            total=5,
-            connect=5,
-            read=5,
+            total=self.retries,
+            connect=self.retries,
+            read=self.retries,
             backoff_factor=0.5,
             status_forcelist=(429, 500, 502, 503, 504),
             allowed_methods=frozenset({"GET"}),
@@ -76,22 +85,24 @@ class GateClient:
         try:
             response = self.session.get(BASE_URL + endpoint, params=params or {}, timeout=self.timeout)
         except requests.exceptions.InvalidSchema as exc:
-            raise GateError(
-                "SOCKS 代理缺少依赖，请执行：python3 -m pip install 'requests[socks]'"
-            ) from exc
+            raise GateError("Gate API 客户端网络配置不可用") from exc
         except requests.RequestException as exc:
-            raise GateError(
-                f"Gate API 网络请求失败：{exc}。请确认本地代理 {self.proxy or '未设置'} 可用。"
-            ) from exc
+            raise GateError("Gate API 网络请求失败") from exc
 
-        if response.status_code != 200:
+        if response.status_code == 429:
+            value = response.headers.get("Retry-After", "30")
             try:
-                detail = response.json()
+                delay = float(value)
             except ValueError:
-                detail = response.text[:500]
-            raise GateError(
-                f"Gate API 请求失败：HTTP {response.status_code}；URL={response.url}；返回={detail}"
-            )
+                try:
+                    delay = (parsedate_to_datetime(value) - datetime.now(timezone.utc)).total_seconds()
+                except (TypeError, ValueError, OverflowError):
+                    delay = 30
+            if not math.isfinite(delay) or delay > 31536000:
+                delay = 30  # Malformed/unrepresentable header, not a usable retry deadline.
+            raise GateRateLimited(delay)
+        if response.status_code != 200:
+            raise GateError(f"Gate API 请求失败：HTTP {response.status_code}")
         try:
             return response.json()
         except ValueError as exc:

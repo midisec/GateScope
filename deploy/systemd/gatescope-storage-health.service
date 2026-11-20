@@ -1,0 +1,29 @@
+[Unit]
+Description=GateScope read-only storage capacity and autovacuum policy report
+After=postgresql@14-main.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/ubuntu/workspace/crypto_gate_trade
+# Deliberately no --apply; no automatic deletion, database tuning or restarts.
+ExecStart=/home/ubuntu/workspace/crypto_gate_trade/.venv/bin/python /home/ubuntu/workspace/crypto_gate_trade/scripts/storage_health_maintenance.py --seconds 20
+TimeoutStartSec=30
+Nice=15
+IOSchedulingClass=idle
+MemoryMax=192M
+CPUQuota=20%
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=read-only
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+LockPersonality=true
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+# A warning exits 2 and is visible as a failed inspection. No OnFailure action
+# is configured: this unit never invokes Telegram or the self-healing restarter.

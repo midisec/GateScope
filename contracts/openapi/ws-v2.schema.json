@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.gatescope.local/openapi/ws-v2.schema.json",
+  "title": "GateScope WebSocket V2 Envelope",
+  "oneOf": [
+    {"$ref": "#/$defs/clientMessage"},
+    {"$ref": "#/$defs/serverMessage"}
+  ],
+  "$defs": {
+    "clientMessage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["request_id", "action", "topic"],
+      "properties": {
+        "request_id": {"type": "string", "minLength": 1, "maxLength": 64},
+        "action": {"enum": ["subscribe", "unsubscribe"]},
+        "topic": {"type": "string", "minLength": 1, "maxLength": 240},
+        "cursor": {"type": ["string", "null"], "maxLength": 256}
+      }
+    },
+    "serverMessage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "stream_key", "sequence", "watermark", "server_time", "schema_version", "payload"],
+      "properties": {
+        "type": {"enum": ["subscribed", "unsubscribed", "event", "error", "heartbeat", "resync_required"]},
+        "stream_key": {"type": "string", "minLength": 1, "maxLength": 400},
+        "sequence": {"type": "integer", "minimum": 1},
+        "watermark": {"type": "string", "maxLength": 256},
+        "server_time": {"type": "string", "format": "date-time"},
+        "schema_version": {"const": 1},
+        "payload": {"type": "object"}
+      }
+    }
+  },
+  "x-sequence-scope": "stream_key",
+  "x-close-codes": {
+    "4401": "unauthenticated_or_revoked",
+    "4403": "topic_forbidden",
+    "4409": "resync_required",
+    "4429": "rate_limited"
+  }
+}

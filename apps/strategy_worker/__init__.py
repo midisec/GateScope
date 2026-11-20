@@ -1,0 +1,2 @@
+"""Strategy worker composition root."""
+

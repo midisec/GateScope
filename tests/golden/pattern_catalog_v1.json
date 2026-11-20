@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "catalog_ids": [
+    "double_top", "double_bottom", "triple_top", "triple_bottom", "head_shoulders",
+    "inverse_head_shoulders", "cup_handle", "inverse_cup_handle", "bull_flag", "bear_flag",
+    "bull_pennant", "bear_pennant", "ascending_triangle", "descending_triangle",
+    "symmetrical_triangle", "rectangle", "rising_wedge", "falling_wedge", "uptrend_channel",
+    "downtrend_channel", "elliott_impulse_bull", "elliott_impulse_bear",
+    "elliott_correction_bull", "elliott_correction_bear", "elliott_cycle_bull", "elliott_cycle_bear"
+  ]
+}
+

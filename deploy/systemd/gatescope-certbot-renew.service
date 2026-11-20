@@ -1,0 +1,14 @@
+[Unit]
+Description=Renew GateScope short-lived IP TLS certificate
+After=network-online.target nginx.service
+Wants=network-online.target
+StartLimitIntervalSec=3600
+StartLimitBurst=3
+
+[Service]
+Type=oneshot
+ExecStart=/opt/gatescope-certbot/bin/certbot renew --quiet --no-random-sleep-on-renew
+TimeoutStartSec=300
+UMask=0077
+Restart=on-failure
+RestartSec=300

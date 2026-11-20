@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "fixture": "deterministic_sine_480x15m",
+  "sha256": "0f3b58999c0640795030fd3a1840248fd43876608fcb6e4262814d55a6e7cccb",
+  "event_count": 66,
+  "historical_event_count": 66,
+  "counts_by_pattern": {
+    "ascending_triangle": 3,
+    "bull_pennant": 3,
+    "cup_handle": 13,
+    "double_bottom": 5,
+    "double_top": 8,
+    "downtrend_channel": 5,
+    "elliott_impulse_bull": 1,
+    "falling_wedge": 1,
+    "head_shoulders": 1,
+    "inverse_cup_handle": 7,
+    "inverse_head_shoulders": 2,
+    "rising_wedge": 4,
+    "symmetrical_triangle": 4,
+    "triple_top": 2,
+    "uptrend_channel": 7
+  }
+}
+

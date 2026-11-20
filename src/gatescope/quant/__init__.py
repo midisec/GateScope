@@ -1,0 +1,71 @@
+"""Mathematically explicit, fail-closed research decision primitives."""
+
+from gatescope.quant.evidence import (
+    GodDecision,
+    GodEvidenceEvaluator,
+    OutcomeBlock,
+    ProbabilityPolicy,
+)
+from gatescope.quant.live_eligibility import (
+    LiveEligibilityArtifact,
+    LiveEligibilityDecision,
+    LiveEligibilityGateEvaluator,
+    LiveEligibilityPolicy,
+)
+from gatescope.quant.selection_bias import (
+    CscvPboResult,
+    CscvPolicy,
+    DeflatedSharpeResult,
+    cscv_probability_of_backtest_overfitting,
+    deflated_sharpe_ratio,
+)
+from gatescope.quant.validation import (
+    AdjustedHypothesis,
+    BlockBootstrapResult,
+    CircularBlockBootstrapPolicy,
+    EffectiveSampleResult,
+    EventInterval,
+    EventUniqueness,
+    PurgedFold,
+    TemporalSample,
+    WalkForwardFold,
+    circular_block_bootstrap_mean,
+    effective_independent_blocks,
+    event_uniqueness,
+    holm_adjusted_p_values,
+    purged_embargo_split,
+    required_iid_blocks_for_ev,
+    validate_outer_walk_forward,
+)
+
+__all__ = [
+    "GodDecision",
+    "GodEvidenceEvaluator",
+    "OutcomeBlock",
+    "ProbabilityPolicy",
+    "LiveEligibilityArtifact",
+    "LiveEligibilityDecision",
+    "LiveEligibilityGateEvaluator",
+    "LiveEligibilityPolicy",
+    "CscvPboResult",
+    "CscvPolicy",
+    "DeflatedSharpeResult",
+    "cscv_probability_of_backtest_overfitting",
+    "deflated_sharpe_ratio",
+    "AdjustedHypothesis",
+    "BlockBootstrapResult",
+    "CircularBlockBootstrapPolicy",
+    "EffectiveSampleResult",
+    "EventInterval",
+    "EventUniqueness",
+    "PurgedFold",
+    "TemporalSample",
+    "WalkForwardFold",
+    "circular_block_bootstrap_mean",
+    "effective_independent_blocks",
+    "event_uniqueness",
+    "holm_adjusted_p_values",
+    "purged_embargo_split",
+    "required_iid_blocks_for_ev",
+    "validate_outer_walk_forward",
+]

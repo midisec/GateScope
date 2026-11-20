@@ -1,0 +1,46 @@
+[Unit]
+Description=GateScope outbound OpenAI MCP tunnel (per-user OAuth retained)
+After=network-online.target nginx.service gatescope-api.service gatescope-mcp.service
+Wants=network-online.target nginx.service gatescope-api.service gatescope-mcp.service
+ConditionFileNotEmpty=/etc/gatescope-tunnel/control-plane.env
+StartLimitIntervalSec=300
+StartLimitBurst=3
+
+[Service]
+Type=simple
+DynamicUser=yes
+User=gatescope-tunnel
+Group=gatescope-tunnel
+WorkingDirectory=/usr/local/lib/gatescope-tunnel
+EnvironmentFile=/etc/gatescope-tunnel/control-plane.env
+ExecStartPre=/usr/bin/python3 /usr/local/lib/gatescope-tunnel/check-origin-ready.py --origin https://43.108.44.74 --timeout 45
+ExecStart=/opt/gatescope-tools/tunnel-client/v0.0.14/tunnel-client run --config /usr/local/lib/gatescope-tunnel/client.yaml --control-plane.max-inflight 8 --mcp.max-concurrent-requests 4 --mcp.startup-wait-timeout 30s --log.level warn --log.http-raw-unsafe=false --admin-ui.log-buffer-events 200 --allow-remote-ui=false --harpoon.capture-payloads=false --harpoon.hosts-include-loopback=false --harpoon.hosts-include-private=false
+Restart=on-failure
+RestartSec=30
+TimeoutStartSec=60
+TimeoutStopSec=30
+UMask=0077
+MemoryHigh=128M
+MemoryMax=256M
+CPUQuota=50%
+TasksMax=64
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+ProtectProc=invisible
+RestrictNamespaces=yes
+LockPersonality=yes
+RestrictSUIDSGID=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+CapabilityBoundingSet=
+AmbientCapabilities=
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

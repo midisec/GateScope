@@ -21,9 +21,11 @@
       <button class="top-tab" data-view="alerts-view">告警中心 <span id="unread-badge" class="badge hidden">0</span></button>
     </nav>
     <div class="status-area">
+      <span id="auth-user" class="auth-user"></span>
       <span id="scanner-dot" class="status-dot"></span>
       <span id="scanner-text">正在连接</span>
       <button id="refresh-current" class="icon-button" title="刷新当前行情">↻</button>
+      <button id="logout-button" class="icon-button logout-button" title="退出登录">退出</button>
     </div>
   </header>
 
@@ -294,6 +296,6 @@
   <div id="toast" class="toast"></div>
 
   <script src="/static/vendor/lightweight-charts.standalone.production.js"></script>
-  <script src="/static/app.js"></script>
+  <script src="/static/app.js?v=20260908-live-watchlist"></script>
 </body>
 </html>

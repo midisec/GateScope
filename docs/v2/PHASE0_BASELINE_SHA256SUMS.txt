@@ -1,0 +1,12 @@
+# Pre-implementation baseline captured 2026-09-07 Asia/Shanghai.
+d30f0ebffa8e4fc47ef4df47ca18ab2a061e12c33cf159a21a50e706ed09ef21  app.py
+608e617ab77d75713a412762167c44a9f9e679527beed1a2b44c0d166c3a2387  database.py
+6962f05a07a633aa63b1aa91b6ba09bf3aed9d99a90f8ca15f752b70655db392  gate_client.py
+6c0f49db45c12d57af9fe34332cd5173538a41cb74398b7393edef648679a242  scanner.py
+c15dc9bcb1313d31e8bd64a978e9bc799efcd8a53308c6b3fa5d76f195ad5b6c  opportunity_scanner.py
+d7e763b9436f8f86c3106b5e50d251e01178f951eac6a5c24b7b5199a3339d0c  pattern_engine.py
+db89307d071db226df794d7c179c7a8df6e8fe19267a5bb070ba5289d859782a  data/gate_patterns.db
+
+# Core baseline row counts: instruments=3323, candles=109135, watchlist=7,
+# alert_rules=3, alert_events=162, opportunity_runs=23,
+# opportunity_tasks=408, opportunity_results=217. PRAGMA integrity_check=ok.

@@ -1,9 +1,9 @@
 services:
   - type: web
-    name: gate-chart-pattern-scanner
+    name: gatescope-research
     runtime: docker
     plan: starter
-    healthCheckPath: /api/status
+    healthCheckPath: /health/ready
     envVars:
       - key: HOST
         value: 0.0.0.0
@@ -11,7 +11,17 @@ services:
         value: 8777
       - key: NO_BROWSER
         value: 1
+      - key: GATESCOPE_COOKIE_SECURE
+        value: 1
+      - key: GATESCOPE_BOOTSTRAP_USERNAME
+        value: owner
+      - key: GATESCOPE_BOOTSTRAP_PASSWORD
+        sync: false
+      - key: LIVE_TRADING_ENABLED
+        value: "false"
+      - key: GATESCOPE_EXECUTION_ENVIRONMENT
+        value: PAPER
     disk:
-      name: scanner-data
+      name: gatescope-data
       mountPath: /app/data
       sizeGB: 1

@@ -1,0 +1,8 @@
+[Unit]
+Description=GateScope emergency memory buffer (not a substitute for RAM)
+
+[Swap]
+What=/swapfile
+
+[Install]
+WantedBy=swap.target

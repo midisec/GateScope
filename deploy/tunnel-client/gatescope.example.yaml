@@ -1,0 +1,22 @@
+# Template only. Generate the deployed profile with the verified client's init
+# command and the operator's actual tunnel ID. Never place keys in this file.
+config_version: 1
+control_plane:
+  base_url: "https://api.openai.com"
+  tunnel_id: "tunnel_0123456789abcdef0123456789abcdef"
+  api_key: "env:CONTROL_PLANE_API_KEY"
+health:
+  listen_addr: "127.0.0.1:17801"
+admin_ui:
+  open_browser: false
+log:
+  level: warn
+  format: json
+mcp:
+  server_urls:
+    - channel: main
+      # Keep main on the same HTTPS origin as the advertised OAuth resource,
+      # PRM and authorization server. A loopback main with public metadata is
+      # cross-origin: v0.0.14 excludes the automatic OAuth Harpoon targets and
+      # ChatGPT's legacy OAuth discovery requests fail as unsupported_channel.
+      url: "https://43.108.44.74/mcp"

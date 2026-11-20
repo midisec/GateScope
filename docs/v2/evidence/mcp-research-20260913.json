@@ -1,0 +1,256 @@
+{
+  "release": "gatescope-research-1.2.0",
+  "migration": "0045_mcp_research_read",
+  "verified_at_utc": "2026-09-13T12:44:00Z",
+  "automated_tests": {
+    "backend_unit_golden": 1350,
+    "postgres_integration": 29,
+    "frontend": 252,
+    "frontend_build": "PASS",
+    "openapi_baseline": "PASS"
+  },
+  "live_contract_pass": true,
+  "research": {
+    "cases": [
+      {
+        "tool": "market_chart_snapshot",
+        "timeframe": "5m",
+        "elapsed_seconds": 0.108,
+        "status": "READY",
+        "items": 0,
+        "quality_flags": [
+          "EXCHANGE_FINALITY_ASSUMED",
+          "REST_POLLING"
+        ],
+        "image_size": [
+          1200,
+          900
+        ],
+        "png_bytes": 72948,
+        "image_sha256": "07a360983917ab00fc55f00358e04480c101ff9ef9ebdc7a51cc2d2b172ff48e",
+        "closed_candles": 100,
+        "last_closed_at": "2026-09-13T12:40:00+00:00",
+        "captured_at": "2026-09-13T12:44:01.566288+00:00",
+        "ready_indicators": {
+          "ema9": 100,
+          "ema21": 100,
+          "rsi14": 100
+        }
+      },
+      {
+        "tool": "market_chart_snapshot",
+        "timeframe": "15m",
+        "elapsed_seconds": 0.114,
+        "status": "READY",
+        "items": 0,
+        "quality_flags": [
+          "EXCHANGE_FINALITY_ASSUMED",
+          "HISTORICAL_BACKFILL",
+          "REST_POLLING"
+        ],
+        "image_size": [
+          1200,
+          900
+        ],
+        "png_bytes": 72298,
+        "image_sha256": "d35938d87584a225c6ee22e8f8f3bd0b5ea1aca12f1b54331e687942162fcd8d",
+        "closed_candles": 100,
+        "last_closed_at": "2026-09-13T12:30:00+00:00",
+        "captured_at": "2026-09-13T12:44:01.685150+00:00",
+        "ready_indicators": {
+          "ema9": 100,
+          "ema21": 100,
+          "rsi14": 100
+        }
+      },
+      {
+        "tool": "market_chart_snapshot",
+        "timeframe": "1h",
+        "elapsed_seconds": 1.747,
+        "status": "READY",
+        "items": 0,
+        "quality_flags": [
+          "AVAILABLE_AT_APPROXIMATED",
+          "AVAILABLE_AT_UNKNOWN",
+          "EXCHANGE_FINALITY_ASSUMED",
+          "HISTORICAL_BACKFILL",
+          "LEGACY_FINALITY_ASSUMED",
+          "LEGACY_SOURCE",
+          "REST_POLLING"
+        ],
+        "image_size": [
+          1200,
+          900
+        ],
+        "png_bytes": 72006,
+        "image_sha256": "15acc8a4871c6d4c099717c817ad82b39ad83197cec4863cf5f13423c95536d8",
+        "closed_candles": 100,
+        "last_closed_at": "2026-09-13T12:00:00+00:00",
+        "captured_at": "2026-09-13T12:44:01.795637+00:00",
+        "ready_indicators": {
+          "ema9": 100,
+          "ema21": 100,
+          "rsi14": 100
+        }
+      },
+      {
+        "tool": "structure_current",
+        "timeframe": "15m",
+        "elapsed_seconds": 0.266,
+        "status": "READY",
+        "items": 3,
+        "quality_flags": []
+      },
+      {
+        "tool": "structure_study",
+        "timeframe": "15m",
+        "elapsed_seconds": 0.159,
+        "status": "READY",
+        "items": 0,
+        "quality_flags": []
+      },
+      {
+        "tool": "structure_event_list",
+        "timeframe": "15m",
+        "elapsed_seconds": 0.072,
+        "status": "READY",
+        "items": 2,
+        "quality_flags": []
+      },
+      {
+        "tool": "structure_event_detail",
+        "timeframe": "15m",
+        "elapsed_seconds": 0.06,
+        "status": "READY",
+        "items": 0,
+        "quality_flags": []
+      },
+      {
+        "tool": "indicator_get_series",
+        "timeframe": "15m",
+        "elapsed_seconds": 0.047,
+        "status": null,
+        "items": 200,
+        "quality_flags": [
+          "EXCHANGE_FINALITY_ASSUMED",
+          "REST_POLLING"
+        ]
+      },
+      {
+        "tool": "market_research_bundle",
+        "timeframe": null,
+        "elapsed_seconds": 2.176,
+        "status": null,
+        "items": 3,
+        "quality_flags": []
+      },
+      {
+        "tool": "watchlist_list",
+        "timeframe": null,
+        "elapsed_seconds": 0.038,
+        "status": null,
+        "items": 3,
+        "quality_flags": []
+      },
+      {
+        "tool": "research_backtest_list",
+        "timeframe": null,
+        "elapsed_seconds": 0.069,
+        "status": null,
+        "items": 2,
+        "quality_flags": []
+      },
+      {
+        "tool": "research_backtest_detail",
+        "timeframe": null,
+        "elapsed_seconds": 0.041,
+        "status": "AVAILABLE",
+        "items": 1,
+        "quality_flags": []
+      },
+      {
+        "tool": "research_backtest_detail",
+        "timeframe": null,
+        "elapsed_seconds": 0.04,
+        "status": "AVAILABLE",
+        "items": 3,
+        "quality_flags": []
+      },
+      {
+        "tool": "research_backtest_detail",
+        "timeframe": null,
+        "elapsed_seconds": 0.118,
+        "status": "AVAILABLE",
+        "items": 3,
+        "quality_flags": []
+      },
+      {
+        "tool": "research_backtest_detail",
+        "timeframe": null,
+        "elapsed_seconds": 0.051,
+        "status": "AVAILABLE",
+        "items": 3,
+        "quality_flags": []
+      }
+    ],
+    "warnings": [
+      {
+        "tool": "structure_event_detail",
+        "timeframe": "15m",
+        "reason": "ORIGINAL_CHART_CLIPPED"
+      },
+      {
+        "tool": "market_research_bundle.structures",
+        "timeframe": "5m",
+        "reason": "PARTIAL"
+      }
+    ],
+    "openai_called": false,
+    "orders_changed": false,
+    "tool_count": 20,
+    "ok": true,
+    "data_ready": false,
+    "outcome": "CONTRACT_PASS_EVIDENCE_PARTIAL"
+  },
+  "oauth": {
+    "discovery": {
+      "resource_metadata_count": 2,
+      "authorization_metadata_status": 200,
+      "anonymous_status": 401,
+      "resource_challenge": true,
+      "pkce_s256": true
+    },
+    "binding": {
+      "wrong_pkce_status": 400,
+      "wrong_resource_status": 400,
+      "exchange_status": 200
+    },
+    "viewports": [
+      {
+        "width": 1440,
+        "overflow": false
+      },
+      {
+        "width": 390,
+        "overflow": false
+      }
+    ],
+    "csrf_status": 403,
+    "refresh": {
+      "rotated": true,
+      "replay_status": 400,
+      "revoked_access_status": 401
+    },
+    "explicit_revocation": {
+      "status": 200,
+      "revoked_access_status": 401,
+      "refresh_denied": true
+    },
+    "unique_intercepted_callbacks": 2,
+    "identical_aborted_navigation_retries": 1,
+    "temporary_clients_revoked": 2,
+    "existing_clients_modified": false,
+    "openai_called": false
+  },
+  "interpretation": "Production MCP/browser acceptance only, not an actual ChatGPT model analysis. Evidence is partial where marked; latency observations are not an SLA."
+}

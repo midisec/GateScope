@@ -1,0 +1,136 @@
+{
+  "verified_at": "2026-09-13T11:11:34.941Z",
+  "deployment": "43.108.44.74",
+  "migration": "0043_coinglass_cache_cooldown",
+  "backend_unit_tests": 1114,
+  "postgres_integration_tests": 11,
+  "frontend_tests": 233,
+  "release_files_sha256_match": true,
+  "release_file_count": 39,
+  "tunnel_strict_health_exit": 0,
+  "tunnel_targets": 8,
+  "kind": "DEDICATED_TEMPORARY_MCP_DEPLOYMENT_CHECK",
+  "cases": [
+    {
+      "symbol": "BTC_USDT",
+      "timeframe": "1h",
+      "ok": true,
+      "elapsed_seconds": 0.225,
+      "anonymous_status": 401,
+      "tool_count": 10,
+      "closed_bars": 100,
+      "indicator_count": 8,
+      "ready_indicators": 8,
+      "closed_age_seconds": 644.57425,
+      "quality_flags": [
+        "AVAILABLE_AT_APPROXIMATED",
+        "EXCHANGE_FINALITY_ASSUMED",
+        "HISTORICAL_BACKFILL",
+        "REST_POLLING"
+      ],
+      "realtime_status": "CURRENT",
+      "coinglass_status": "PARTIAL",
+      "coinglass_series": 5,
+      "coinglass_fetched_at": 1789297775,
+      "coinglass_refresh_status": "PARTIAL",
+      "coinglass_refresh_requested": true,
+      "coinglass_retry_after_seconds": 0,
+      "coinglass_metrics": [
+        {
+          "id": "oi",
+          "status": "READY",
+          "unit_status": "VERIFIED",
+          "points": 255
+        },
+        {
+          "id": "funding",
+          "status": "MISMATCH",
+          "unit_status": "UNKNOWN",
+          "points": 0
+        },
+        {
+          "id": "lsr",
+          "status": "READY",
+          "unit_status": "VERIFIED",
+          "points": 255
+        },
+        {
+          "id": "liquidation_long",
+          "status": "READY",
+          "unit_status": "VERIFIED",
+          "points": 255
+        },
+        {
+          "id": "liquidation_short",
+          "status": "READY",
+          "unit_status": "VERIFIED",
+          "points": 255
+        }
+      ]
+    },
+    {
+      "symbol": "ETH_USDT",
+      "timeframe": "1d",
+      "ok": true,
+      "elapsed_seconds": 0.196,
+      "anonymous_status": 401,
+      "tool_count": 10,
+      "closed_bars": 100,
+      "indicator_count": 8,
+      "ready_indicators": 8,
+      "closed_age_seconds": 40244.776776,
+      "quality_flags": [
+        "AVAILABLE_AT_APPROXIMATED",
+        "AVAILABLE_AT_UNKNOWN",
+        "EXCHANGE_FINALITY_ASSUMED",
+        "LEGACY_FINALITY_ASSUMED",
+        "LEGACY_SOURCE",
+        "REST_POLLING"
+      ],
+      "realtime_status": "CURRENT",
+      "coinglass_status": "PARTIAL",
+      "coinglass_series": 5,
+      "coinglass_fetched_at": 1789297834,
+      "coinglass_refresh_status": "PARTIAL",
+      "coinglass_refresh_requested": true,
+      "coinglass_retry_after_seconds": 0,
+      "coinglass_metrics": [
+        {
+          "id": "oi",
+          "status": "READY",
+          "unit_status": "VERIFIED",
+          "points": 255
+        },
+        {
+          "id": "funding",
+          "status": "MISMATCH",
+          "unit_status": "UNKNOWN",
+          "points": 0
+        },
+        {
+          "id": "lsr",
+          "status": "READY",
+          "unit_status": "VERIFIED",
+          "points": 255
+        },
+        {
+          "id": "liquidation_long",
+          "status": "READY",
+          "unit_status": "VERIFIED",
+          "points": 255
+        },
+        {
+          "id": "liquidation_short",
+          "status": "READY",
+          "unit_status": "VERIFIED",
+          "points": 255
+        }
+      ]
+    }
+  ],
+  "temporary_client_revoked": true,
+  "revoked_http_status": 401,
+  "existing_clients_modified": false,
+  "openai_called": false,
+  "ok": true
+}

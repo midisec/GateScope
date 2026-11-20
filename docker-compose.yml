@@ -1,12 +1,223 @@
 services:
-  gate-pattern-scanner:
-    build: .
+  gatescope-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
-      - "8777:8777"
+      - "127.0.0.1:8777:8777"
     environment:
       HOST: 0.0.0.0
       PORT: 8777
       NO_BROWSER: 1
+      GATESCOPE_PUBLIC_ORIGIN: http://127.0.0.1:8777
+      GATESCOPE_COOKIE_SECURE: 0
+      GATESCOPE_BOOTSTRAP_USERNAME: ${GATESCOPE_BOOTSTRAP_USERNAME:-}
+      GATESCOPE_BOOTSTRAP_PASSWORD: ${GATESCOPE_BOOTSTRAP_PASSWORD:-}
+      LIVE_TRADING_ENABLED: "false"
+      GATESCOPE_EXECUTION_ENVIRONMENT: PAPER
+      GATESCOPE_START_WORKERS: "false"
+      GATESCOPE_DATABASE_URL: ${GATESCOPE_DATABASE_URL:-}
+      GATESCOPE_IDENTITY_KEK: ${GATESCOPE_IDENTITY_KEK:-}
+      GATESCOPE_IDENTITY_KEY_VERSION: ${GATESCOPE_IDENTITY_KEY_VERSION:-}
+      GATESCOPE_RECOVERY_PEPPER: ${GATESCOPE_RECOVERY_PEPPER:-}
+      GATESCOPE_CURSOR_SIGNING_KEY: ${GATESCOPE_CURSOR_SIGNING_KEY:-}
+      GATESCOPE_CREDENTIAL_WRAP_PUBLIC_KEY: ${GATESCOPE_CREDENTIAL_WRAP_PUBLIC_KEY:-}
+      GATESCOPE_CREDENTIAL_KEY_VERSION: ${GATESCOPE_CREDENTIAL_KEY_VERSION:-}
+      GATESCOPE_TELEGRAM_WRAP_PUBLIC_KEY: ${GATESCOPE_TELEGRAM_WRAP_PUBLIC_KEY:-}
+      GATESCOPE_TELEGRAM_KEY_VERSION: ${GATESCOPE_TELEGRAM_KEY_VERSION:-}
+      GATESCOPE_SUBMISSION_WRAP_PUBLIC_KEY: ${GATESCOPE_SUBMISSION_WRAP_PUBLIC_KEY:-}
+      GATESCOPE_SUBMISSION_WRAP_PRIVATE_KEY: ${GATESCOPE_SUBMISSION_WRAP_PRIVATE_KEY:-}
+      GATESCOPE_SUBMISSION_KEY_VERSION: ${GATESCOPE_SUBMISSION_KEY_VERSION:-}
+      GATESCOPE_TELEGRAM_BOT_USERNAME: ${GATESCOPE_TELEGRAM_BOT_USERNAME:-}
+      GATESCOPE_TELEGRAM_WEBHOOK_ID: ${GATESCOPE_TELEGRAM_WEBHOOK_ID:-}
+      GATESCOPE_TELEGRAM_WEBHOOK_SECRET: ${GATESCOPE_TELEGRAM_WEBHOOK_SECRET:-}
+      GATESCOPE_TELEGRAM_ALLOWED_USER_IDS: ${GATESCOPE_TELEGRAM_ALLOWED_USER_IDS:-}
     volumes:
       - ./data:/app/data
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,noexec,nosuid,nodev
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 256
+    restart: unless-stopped
+
+  market-worker:
+    build:
+      context: .
+      dockerfile: deploy/images/research-worker.Dockerfile
+    command: ["python", "-m", "apps.market_worker.main"]
+    environment:
+      GATESCOPE_DB_PATH: /app/data/gate_patterns.db
+      LIVE_TRADING_ENABLED: "false"
+      GATESCOPE_EXECUTION_ENVIRONMENT: PAPER
+    volumes:
+      - ./data:/app/data
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,noexec,nosuid,nodev
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 256
+    restart: unless-stopped
+
+  strategy-worker:
+    build:
+      context: .
+      dockerfile: deploy/images/research-worker.Dockerfile
+    command: ["python", "-m", "apps.strategy_worker.main"]
+    environment:
+      GATESCOPE_DB_PATH: /app/data/gate_patterns.db
+      LIVE_TRADING_ENABLED: "false"
+      GATESCOPE_EXECUTION_ENVIRONMENT: PAPER
+    volumes:
+      - ./data:/app/data
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,noexec,nosuid,nodev
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 256
+    restart: unless-stopped
+
+  research-worker:
+    profiles: ["formal"]
+    build:
+      context: .
+      dockerfile: deploy/images/research-worker.Dockerfile
+    command: ["python", "-m", "apps.research_worker.main"]
+    environment:
+      GATESCOPE_DATABASE_URL: ${GATESCOPE_STRATEGY_DATABASE_URL:-}
+      GATESCOPE_RESEARCH_WORKER_ID: research-compose-1
+      LIVE_TRADING_ENABLED: "false"
+      GATESCOPE_EXECUTION_ENVIRONMENT: PAPER
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,noexec,nosuid,nodev
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 128
+    cpus: 1.0
+    mem_limit: 768m
+    restart: unless-stopped
+
+  notification-worker:
+    profiles: ["formal"]
+    build:
+      context: .
+      dockerfile: deploy/images/notification-worker.Dockerfile
+    environment:
+      GATESCOPE_DATABASE_URL: ${GATESCOPE_DATABASE_URL:-}
+      GATESCOPE_TELEGRAM_BOT_TOKEN: ${GATESCOPE_TELEGRAM_BOT_TOKEN:-}
+      GATESCOPE_TELEGRAM_WRAP_PRIVATE_KEY: ${GATESCOPE_TELEGRAM_WRAP_PRIVATE_KEY:-}
+      GATESCOPE_TELEGRAM_KEY_VERSION: ${GATESCOPE_TELEGRAM_KEY_VERSION:-}
+      GATESCOPE_WORKER_ID: notification-compose-1
+      LIVE_TRADING_ENABLED: "false"
+      GATESCOPE_EXECUTION_ENVIRONMENT: PAPER
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,noexec,nosuid,nodev
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 128
+    restart: unless-stopped
+
+  mcp-server:
+    profiles: ["formal"]
+    build:
+      context: .
+      dockerfile: deploy/images/mcp-server.Dockerfile
+    ports:
+      - "127.0.0.1:8780:8780"
+    environment:
+      GATESCOPE_DATABASE_URL: ${GATESCOPE_MCP_DATABASE_URL:-}
+      GATESCOPE_MCP_HOST: 0.0.0.0
+      GATESCOPE_MCP_PORT: 8780
+      GATESCOPE_MCP_PUBLIC_URL: ${GATESCOPE_MCP_PUBLIC_URL:-http://127.0.0.1:8780/mcp}
+      LIVE_TRADING_ENABLED: "false"
+      GATESCOPE_EXECUTION_ENVIRONMENT: PAPER
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,noexec,nosuid,nodev
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 128
+    restart: unless-stopped
+
+  paper-worker:
+    profiles: ["formal"]
+    build:
+      context: .
+      dockerfile: deploy/images/paper-worker.Dockerfile
+    environment:
+      GATESCOPE_DATABASE_URL: ${GATESCOPE_PAPER_DATABASE_URL:-}
+      GATESCOPE_WORKER_ID: paper-compose-1
+      LIVE_TRADING_ENABLED: "false"
+      GATESCOPE_EXECUTION_ENVIRONMENT: PAPER
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,noexec,nosuid,nodev
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 128
+    restart: unless-stopped
+
+  credential-validator:
+    profiles: ["formal"]
+    build:
+      context: .
+      dockerfile: deploy/images/executor.Dockerfile
+    environment:
+      GATESCOPE_DATABASE_URL: ${GATESCOPE_EXECUTOR_DATABASE_URL:-}
+      GATESCOPE_CREDENTIAL_WRAP_PRIVATE_KEY: ${GATESCOPE_CREDENTIAL_WRAP_PRIVATE_KEY:-}
+      GATESCOPE_CREDENTIAL_KEY_VERSION: ${GATESCOPE_CREDENTIAL_KEY_VERSION:-}
+      GATESCOPE_WORKER_ID: credential-compose-1
+      GATESCOPE_EXECUTOR_WORKLOAD: credential-validation
+      LIVE_TRADING_ENABLED: "false"
+      GATESCOPE_EXECUTION_ENVIRONMENT: PAPER
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,noexec,nosuid,nodev
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 128
+    restart: unless-stopped
+
+  gate-testnet-executor:
+    profiles: ["testnet"]
+    build:
+      context: .
+      dockerfile: deploy/images/executor.Dockerfile
+    environment:
+      GATESCOPE_DATABASE_URL: ${GATESCOPE_EXECUTOR_DATABASE_URL:-}
+      GATESCOPE_CREDENTIAL_WRAP_PRIVATE_KEY: ${GATESCOPE_CREDENTIAL_WRAP_PRIVATE_KEY:-}
+      GATESCOPE_CREDENTIAL_KEY_VERSION: ${GATESCOPE_CREDENTIAL_KEY_VERSION:-}
+      GATESCOPE_WORKER_ID: gate-testnet-compose-1
+      GATESCOPE_EXECUTOR_WORKLOAD: gate-testnet-execution
+      LIVE_TRADING_ENABLED: "false"
+      GATESCOPE_EXECUTION_ENVIRONMENT: TESTNET
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,noexec,nosuid,nodev
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 128
     restart: unless-stopped

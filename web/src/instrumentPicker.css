@@ -1,0 +1,13 @@
+.instrument-picker { position: relative; min-width: 0; width: 100%; }
+.instrument-label { display: block; margin-bottom: 7px; color: #9aa9be; font-size: 12px; }
+.instrument-trigger { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 44px; text-align: left; background: #0e1724; }
+.instrument-trigger small { color: #899bb7; }
+.instrument-popover { position: absolute; top: calc(100% + 5px); inset-inline: 0; z-index: 45; padding: 10px; border: 1px solid #3b506b; border-radius: 8px; background: #151f2e; box-shadow: 0 14px 35px #0009; }
+.instrument-popover input { width: 100%; min-width: 0; }
+.instrument-popover > small { display: block; margin: 10px 2px; color: #91a2bb; font-size: 11px; }
+.instrument-popover [role=listbox] { max-height: 240px; overflow-y: auto; overscroll-behavior: contain; }
+.instrument-popover [role=option] { display: flex; justify-content: space-between; align-items: center; gap: 10px; width: 100%; min-height: 44px; border: 0; text-align: left; background: transparent; }
+.instrument-popover [role=option]:hover, .instrument-popover [role=option].highlight { background: #23344d; }
+.instrument-popover [role=option] small, .instrument-popover p { color: #91a2bb; font-size: 12px; }
+.pattern-options { grid-column: 1 / -1; min-width: 0; }
+.pattern-options > summary { cursor: pointer; padding: 13px 0; color: #9bb0cd; font-size: 12px; }

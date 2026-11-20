@@ -4,7 +4,6 @@
 
 from __future__ import annotations
 
-import math
 import threading
 import time
 from typing import Any, Optional, Sequence
@@ -71,7 +70,7 @@ class OpportunityScanner:
         if self._thread and self._thread.is_alive():
             return
         self._stop.clear()
-        self._thread = threading.Thread(target=self._loop, name="gate-opportunity-scanner", daemon=True)
+        self._thread = threading.Thread(target=self.run_forever, name="gate-opportunity-scanner", daemon=True)
         self._thread.start()
 
     def stop(self) -> None:
@@ -127,7 +126,7 @@ class OpportunityScanner:
         self._wake.set()
         return dict(self.status)
 
-    def _loop(self) -> None:
+    def run_forever(self) -> None:
         while not self._stop.is_set():
             settings = self.get_settings()
             now = int(time.time())

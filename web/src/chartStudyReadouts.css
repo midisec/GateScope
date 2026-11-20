@@ -1,0 +1,17 @@
+.chart-study-readouts { display:flex; flex-wrap:wrap; align-items:center; gap:6px; padding:8px 12px; border-bottom:1px solid #243146; }
+.study-readout { display:flex; flex-wrap:wrap; align-items:center; gap:6px; min-width:0; padding:5px 8px; border:1px solid #29394e; border-radius:7px; font-size:11px; line-height:1.5; color:#d9e4f4; background:#111c2b; }
+.study-readout i { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+.study-readout strong { font-weight:600; }
+.study-readout small { color:#91a3bd; }
+.study-readout.historical small { color:#e5b967; }
+.vpvr-readout.partial { border-color:#956c34; background:#282316; }
+.vpvr-readout.partial .vpvr-time-coverage { color:#f0c36f; font-weight:600; }
+.vpvr-readout .vpvr-retry { padding:4px 9px; min-height:34px; font-size:11px; }
+.study-readout.unavailable { border-style:dashed; color:#9aabc1; }
+.study-readout details { position:relative; color:#99abc5; }
+.study-readout summary { cursor:pointer; }
+.study-readout details p { max-width:340px; margin:6px 0 0; line-height:1.7; }
+.chart-study-readouts .study-readout-manage { margin-left:auto; padding:5px 8px; font-size:11px; color:#9fbce9; min-height:30px; }
+@media(max-width:640px) { .chart-study-readouts { padding:8px; gap:6px; } .study-readout { width:100%; padding:6px 8px; } .study-readout details p { max-width:100%; } }
+.market-workspace .chart-area > .chart-panel.has-chart-studies { height:auto; min-height:0; }
+.chart-panel.has-chart-studies .chart-host { flex:0 0 auto; }

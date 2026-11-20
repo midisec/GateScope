@@ -5,11 +5,12 @@
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 import time
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Iterable, Iterator, Optional, Sequence
+from typing import Any, Iterator, Optional, Sequence
 
 
 class Database:
@@ -26,9 +27,18 @@ class Database:
         conn.execute("PRAGMA synchronous=NORMAL")
         conn.execute("PRAGMA foreign_keys=ON")
         conn.execute("PRAGMA busy_timeout=30000")
+        for candidate in (self.path, Path(str(self.path) + "-wal"), Path(str(self.path) + "-shm")):
+            try:
+                if candidate.exists():
+                    os.chmod(candidate, 0o600)
+            except OSError:
+                pass
         try:
             yield conn
             conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
         finally:
             conn.close()
 
@@ -208,6 +218,13 @@ class Database:
                 """
             )
 
+    def healthcheck(self) -> bool:
+        try:
+            with self.connect() as conn:
+                return int(conn.execute("SELECT 1").fetchone()[0]) == 1
+        except sqlite3.Error:
+            return False
+
     @staticmethod
     def _dict(row: Optional[sqlite3.Row]) -> Optional[dict[str, Any]]:
         return dict(row) if row is not None else None
@@ -279,7 +296,7 @@ class Database:
             needle = f"%{query.strip().upper()}%"
             clauses.append("(UPPER(symbol) LIKE ? OR UPPER(display_name) LIKE ? OR UPPER(base) LIKE ?)")
             params.extend([needle, needle, needle])
-        params.extend([max(1, min(limit, 500)), max(0, offset)])
+        params.extend([max(1, min(limit, 501)), max(0, offset)])
         sql = f"""
             SELECT * FROM instruments
             WHERE {' AND '.join(clauses)}
@@ -409,8 +426,8 @@ class Database:
             return 0
         now = int(time.time())
         values = [
-            (instrument_id, interval, int(ts), float(o), float(h), float(l), float(c), float(v), now)
-            for ts, o, h, l, c, v in rows
+            (instrument_id, interval, int(ts), float(o), float(h), float(low), float(c), float(v), now)
+            for ts, o, h, low, c, v in rows
         ]
         with self.connect() as conn:
             conn.executemany(
@@ -455,6 +472,34 @@ class Database:
             rows = conn.execute(
                 f"""
                 SELECT ts, open, high, low, close, volume
+                FROM candles WHERE {' AND '.join(clauses)}
+                ORDER BY ts ASC LIMIT ?
+                """,
+                params,
+            ).fetchall()
+        return [dict(row) for row in rows]
+
+    def get_canonical_candles(
+        self,
+        instrument_id: str,
+        interval: str,
+        start_ts: Optional[int],
+        end_ts: Optional[int],
+        limit: int = 10000,
+    ) -> list[dict[str, Any]]:
+        clauses = ["instrument_id=?", "interval=?"]
+        params: list[Any] = [instrument_id, interval]
+        if start_ts is not None:
+            clauses.append("ts>=?")
+            params.append(start_ts)
+        if end_ts is not None:
+            clauses.append("ts<=?")
+            params.append(end_ts)
+        params.append(max(1, min(limit, 20000)))
+        with self.connect() as conn:
+            rows = conn.execute(
+                f"""
+                SELECT ts, open, high, low, close, volume, updated_at
                 FROM candles WHERE {' AND '.join(clauses)}
                 ORDER BY ts ASC LIMIT ?
                 """,

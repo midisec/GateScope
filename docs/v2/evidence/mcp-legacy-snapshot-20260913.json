@@ -1,0 +1,127 @@
+{
+  "release": "gatescope-research-1.2.1",
+  "verified_at_utc": "2026-09-13T13:05:06Z",
+  "backend_unit_golden_tests": 1382,
+  "live_contract_pass": true,
+  "legacy_snapshot": {
+    "cases": [
+      {
+        "tool": "market_analysis_snapshot",
+        "symbol": "SOL_USDT",
+        "timeframe": "5m",
+        "elapsed_seconds": 1.352,
+        "version": "market-analysis-2",
+        "content_types": [
+          "text",
+          "image"
+        ],
+        "image_status": "READY",
+        "png_bytes": 69347,
+        "image_sha256": "fe59128c005a210f25b9d1c13b3e17fa3d46a713c08ef31023a567e423e8464d",
+        "closed_candles": 100,
+        "ready_indicators": {
+          "ema9": 92,
+          "ema21": 80,
+          "rsi14": 86
+        },
+        "structure_status": "READY",
+        "structure_count": 5,
+        "last_closed_at": "2026-09-13T13:05:00+00:00",
+        "captured_at": "2026-09-13T13:05:04.403526+00:00",
+        "quality_flags": [
+          "EXCHANGE_FINALITY_ASSUMED",
+          "REST_POLLING"
+        ]
+      },
+      {
+        "tool": "market_analysis_snapshot",
+        "symbol": "SOL_USDT",
+        "timeframe": "15m",
+        "elapsed_seconds": 0.232,
+        "version": "market-analysis-2",
+        "content_types": [
+          "text",
+          "image"
+        ],
+        "image_status": "READY",
+        "png_bytes": 70137,
+        "image_sha256": "237e28fd982574a553968ef579073f9610bab264620f64bb3614bd2fb87ffe4e",
+        "closed_candles": 100,
+        "ready_indicators": {
+          "ema9": 92,
+          "ema21": 80,
+          "rsi14": 86
+        },
+        "structure_status": "READY",
+        "structure_count": 5,
+        "last_closed_at": "2026-09-13T13:00:00+00:00",
+        "captured_at": "2026-09-13T13:05:05.750632+00:00",
+        "quality_flags": [
+          "EXCHANGE_FINALITY_ASSUMED",
+          "HISTORICAL_BACKFILL",
+          "REST_POLLING"
+        ]
+      },
+      {
+        "tool": "market_analysis_snapshot",
+        "symbol": "SOL_USDT",
+        "timeframe": "1h",
+        "elapsed_seconds": 0.36,
+        "version": "market-analysis-2",
+        "content_types": [
+          "text",
+          "image"
+        ],
+        "image_status": "READY",
+        "png_bytes": 68696,
+        "image_sha256": "155aa626e3f713c578774e9dd2e2850033882ce6f36c4ee8f762d6e73fe9aa11",
+        "closed_candles": 100,
+        "ready_indicators": {
+          "ema9": 92,
+          "ema21": 80,
+          "rsi14": 86
+        },
+        "structure_status": "READY",
+        "structure_count": 5,
+        "last_closed_at": "2026-09-13T13:00:00+00:00",
+        "captured_at": "2026-09-13T13:05:05.985706+00:00",
+        "quality_flags": [
+          "EXCHANGE_FINALITY_ASSUMED",
+          "HISTORICAL_BACKFILL",
+          "REST_POLLING"
+        ]
+      }
+    ],
+    "only_existing_tool_name_used": true,
+    "tool_list_refresh_required": false,
+    "openai_called": false,
+    "orders_changed": false,
+    "server_version": "1.2.1",
+    "ok": true
+  },
+  "research_contract_pass": true,
+  "research_warnings": [
+    {
+      "tool": "structure_event_detail",
+      "timeframe": "15m",
+      "reason": "ORIGINAL_CHART_CLIPPED"
+    }
+  ],
+  "oauth": {
+    "refresh": {
+      "rotated": true,
+      "replay_status": 400,
+      "revoked_access_status": 401
+    },
+    "explicit_revocation": {
+      "status": 200,
+      "revoked_access_status": 401,
+      "refresh_denied": true
+    },
+    "temporary_clients_revoked": 2,
+    "existing_clients_modified": false,
+    "openai_called": false
+  },
+  "scope_note": "Charts and public patterns require only existing market:read + analysis:read; research:read is not needed.",
+  "validation_boundary": "Actual HTTPS MCP/OAuth wire and public SOL PNGs tested. The user's ChatGPT conversation and cached tool manifest remain outside this test."
+}

@@ -1,0 +1,781 @@
+{
+  "as_of": "2026-09-12T01:28:17.299592+00:00",
+  "scope": "last 20 closed-bar prefixes, up to 600 cached bars, active subscriptions only",
+  "models": [
+    {
+      "version": "structure-study-3.1",
+      "pairs": [
+        {
+          "symbol": "BTC_USDT",
+          "timeframe": "15m",
+          "through": 1789174800,
+          "prefixes": 20,
+          "counts": {
+            "elliott_impulse_bull": 12,
+            "elliott_correction_bear": 12,
+            "elliott_impulse_bear": 8,
+            "head_shoulders": 9,
+            "inverse_cup_handle": 9,
+            "double_bottom": 14,
+            "double_top": 7,
+            "cup_handle": 1
+          },
+          "distinct_geometries": 29,
+          "rejections": {
+            "STALE_PIVOT": 672,
+            "BOUNDARY_RESIDUAL": 9
+          },
+          "anchors_checked": 254,
+          "anchor_errors": 0,
+          "mean_ms": 38.47,
+          "max_ms": 268.72
+        },
+        {
+          "symbol": "BTC_USDT",
+          "timeframe": "1d",
+          "through": 1789084800,
+          "prefixes": 20,
+          "counts": {
+            "elliott_correction_bull": 4,
+            "elliott_impulse_bull": 6,
+            "elliott_correction_bear": 1,
+            "double_top": 5
+          },
+          "distinct_geometries": 5,
+          "rejections": {
+            "STALE_PIVOT": 570,
+            "AMPLITUDE": 4,
+            "BOUNDARY_RESIDUAL": 4
+          },
+          "anchors_checked": 57,
+          "anchor_errors": 0,
+          "mean_ms": 26.94,
+          "max_ms": 32.23
+        },
+        {
+          "symbol": "BTC_USDT",
+          "timeframe": "1h",
+          "through": 1789171200,
+          "prefixes": 20,
+          "counts": {
+            "double_top": 8,
+            "elliott_impulse_bear": 25,
+            "double_bottom": 7,
+            "inverse_cup_handle": 15,
+            "elliott_correction_bull": 16,
+            "downtrend_channel": 3,
+            "elliott_cycle_bear": 7
+          },
+          "distinct_geometries": 33,
+          "rejections": {
+            "STALE_PIVOT": 794,
+            "BOUNDARY_RESIDUAL": 22
+          },
+          "anchors_checked": 404,
+          "anchor_errors": 0,
+          "mean_ms": 30.71,
+          "max_ms": 42.36
+        },
+        {
+          "symbol": "BTC_USDT",
+          "timeframe": "1m",
+          "through": 1789176420,
+          "prefixes": 20,
+          "counts": {
+            "uptrend_channel": 3,
+            "double_bottom": 6
+          },
+          "distinct_geometries": 7,
+          "rejections": {
+            "STALE_PIVOT": 680,
+            "BOUNDARY_RESIDUAL": 36,
+            "AMBIGUOUS_PIVOT_ORDER": 20
+          },
+          "anchors_checked": 42,
+          "anchor_errors": 0,
+          "mean_ms": 28.52,
+          "max_ms": 30.69
+        },
+        {
+          "symbol": "BTC_USDT",
+          "timeframe": "30m",
+          "through": 1789173000,
+          "prefixes": 20,
+          "counts": {
+            "double_top": 1,
+            "elliott_impulse_bull": 9,
+            "elliott_correction_bear": 9,
+            "inverse_head_shoulders": 9,
+            "cup_handle": 1
+          },
+          "distinct_geometries": 5,
+          "rejections": {
+            "STALE_PIVOT": 781,
+            "AMBIGUOUS_PIVOT_ORDER": 3
+          },
+          "anchors_checked": 107,
+          "anchor_errors": 0,
+          "mean_ms": 26.36,
+          "max_ms": 31.51
+        },
+        {
+          "symbol": "BTC_USDT",
+          "timeframe": "4h",
+          "through": 1789156800,
+          "prefixes": 20,
+          "counts": {
+            "double_bottom": 2,
+            "elliott_impulse_bear": 16,
+            "elliott_correction_bull": 20,
+            "double_top": 2,
+            "inverse_cup_handle": 16
+          },
+          "distinct_geometries": 26,
+          "rejections": {
+            "STALE_PIVOT": 704,
+            "BOUNDARY_RESIDUAL": 36
+          },
+          "anchors_checked": 214,
+          "anchor_errors": 0,
+          "mean_ms": 26.89,
+          "max_ms": 32.69
+        },
+        {
+          "symbol": "BTC_USDT",
+          "timeframe": "5m",
+          "through": 1789176000,
+          "prefixes": 20,
+          "counts": {
+            "double_top": 6,
+            "double_bottom": 2,
+            "inverse_cup_handle": 2,
+            "downtrend_channel": 6,
+            "elliott_impulse_bull": 6,
+            "elliott_correction_bear": 6,
+            "rising_wedge": 2
+          },
+          "distinct_geometries": 9,
+          "rejections": {
+            "STALE_PIVOT": 852,
+            "BOUNDARY_RESIDUAL": 39
+          },
+          "anchors_checked": 126,
+          "anchor_errors": 0,
+          "mean_ms": 31.52,
+          "max_ms": 35.48
+        },
+        {
+          "symbol": "BTC_USDT",
+          "timeframe": "8h",
+          "through": 1789142400,
+          "prefixes": 20,
+          "counts": {
+            "elliott_correction_bull": 8,
+            "uptrend_channel": 5,
+            "elliott_impulse_bull": 3,
+            "elliott_correction_bear": 3,
+            "elliott_impulse_bear": 4,
+            "symmetrical_triangle": 8
+          },
+          "distinct_geometries": 8,
+          "rejections": {
+            "STALE_PIVOT": 696,
+            "BOUNDARY_RESIDUAL": 27
+          },
+          "anchors_checked": 187,
+          "anchor_errors": 0,
+          "mean_ms": 29.67,
+          "max_ms": 32.55
+        },
+        {
+          "symbol": "ETH_USDT",
+          "timeframe": "15m",
+          "through": 1789174800,
+          "prefixes": 20,
+          "counts": {
+            "elliott_impulse_bull": 12,
+            "elliott_correction_bear": 12,
+            "cup_handle": 9,
+            "head_shoulders": 1
+          },
+          "distinct_geometries": 14,
+          "rejections": {
+            "STALE_PIVOT": 517,
+            "BOUNDARY_RESIDUAL": 13
+          },
+          "anchors_checked": 122,
+          "anchor_errors": 0,
+          "mean_ms": 24.48,
+          "max_ms": 28.79
+        },
+        {
+          "symbol": "ETH_USDT",
+          "timeframe": "1d",
+          "through": 1789084800,
+          "prefixes": 20,
+          "counts": {
+            "cup_handle": 4,
+            "elliott_impulse_bull": 16,
+            "double_top": 6,
+            "elliott_correction_bear": 2
+          },
+          "distinct_geometries": 12,
+          "rejections": {
+            "STALE_PIVOT": 632,
+            "AMPLITUDE": 3,
+            "BOUNDARY_RESIDUAL": 2
+          },
+          "anchors_checked": 108,
+          "anchor_errors": 0,
+          "mean_ms": 24.06,
+          "max_ms": 27.1
+        },
+        {
+          "symbol": "ETH_USDT",
+          "timeframe": "1h",
+          "through": 1789171200,
+          "prefixes": 20,
+          "counts": {
+            "double_top": 8,
+            "elliott_impulse_bull": 16,
+            "elliott_correction_bear": 9,
+            "inverse_head_shoulders": 7,
+            "falling_wedge": 3,
+            "downtrend_channel": 4
+          },
+          "distinct_geometries": 17,
+          "rejections": {
+            "STALE_PIVOT": 881,
+            "BOUNDARY_RESIDUAL": 25
+          },
+          "anchors_checked": 211,
+          "anchor_errors": 0,
+          "mean_ms": 29.65,
+          "max_ms": 41.85
+        },
+        {
+          "symbol": "ETH_USDT",
+          "timeframe": "1m",
+          "through": 1789176420,
+          "prefixes": 20,
+          "counts": {
+            "elliott_impulse_bear": 11,
+            "inverse_cup_handle": 5,
+            "elliott_correction_bull": 6,
+            "falling_wedge": 1,
+            "downtrend_channel": 1,
+            "double_top": 3,
+            "elliott_cycle_bear": 9,
+            "elliott_impulse_bull": 11,
+            "elliott_correction_bear": 11,
+            "uptrend_channel": 3,
+            "cup_handle": 1
+          },
+          "distinct_geometries": 21,
+          "rejections": {
+            "STALE_PIVOT": 736,
+            "BOUNDARY_RESIDUAL": 54
+          },
+          "anchors_checked": 306,
+          "anchor_errors": 0,
+          "mean_ms": 28.64,
+          "max_ms": 29.38
+        },
+        {
+          "symbol": "ETH_USDT",
+          "timeframe": "30m",
+          "through": 1789173000,
+          "prefixes": 20,
+          "counts": {
+            "double_bottom": 1,
+            "triple_bottom": 1,
+            "elliott_impulse_bull": 10,
+            "elliott_correction_bear": 10
+          },
+          "distinct_geometries": 6,
+          "rejections": {
+            "STALE_PIVOT": 694,
+            "AMPLITUDE": 14,
+            "BOUNDARY_RESIDUAL": 4
+          },
+          "anchors_checked": 68,
+          "anchor_errors": 0,
+          "mean_ms": 25.85,
+          "max_ms": 27.13
+        },
+        {
+          "symbol": "ETH_USDT",
+          "timeframe": "4h",
+          "through": 1789156800,
+          "prefixes": 20,
+          "counts": {
+            "double_bottom": 3,
+            "double_top": 19,
+            "rising_wedge": 13,
+            "cup_handle": 12,
+            "symmetrical_triangle": 16,
+            "elliott_impulse_bear": 12,
+            "elliott_correction_bull": 12,
+            "triple_top": 9,
+            "downtrend_channel": 4,
+            "uptrend_channel": 4
+          },
+          "distinct_geometries": 40,
+          "rejections": {
+            "STALE_PIVOT": 650,
+            "AMBIGUOUS_PIVOT_ORDER": 20,
+            "BOUNDARY_RESIDUAL": 16
+          },
+          "anchors_checked": 594,
+          "anchor_errors": 0,
+          "mean_ms": 27.62,
+          "max_ms": 29.71
+        },
+        {
+          "symbol": "ETH_USDT",
+          "timeframe": "5m",
+          "through": 1789176000,
+          "prefixes": 20,
+          "counts": {
+            "double_bottom": 2,
+            "falling_wedge": 2,
+            "elliott_impulse_bear": 2,
+            "elliott_correction_bull": 2,
+            "double_top": 10,
+            "elliott_impulse_bull": 10,
+            "elliott_correction_bear": 10
+          },
+          "distinct_geometries": 10,
+          "rejections": {
+            "STALE_PIVOT": 762,
+            "BOUNDARY_RESIDUAL": 62
+          },
+          "anchors_checked": 120,
+          "anchor_errors": 0,
+          "mean_ms": 27.74,
+          "max_ms": 29.08
+        },
+        {
+          "symbol": "ETH_USDT",
+          "timeframe": "8h",
+          "through": 1789142400,
+          "prefixes": 20,
+          "counts": {
+            "double_top": 14,
+            "elliott_impulse_bear": 5,
+            "elliott_correction_bull": 8,
+            "triple_top": 9,
+            "double_bottom": 1,
+            "elliott_impulse_bull": 3,
+            "elliott_correction_bear": 3,
+            "symmetrical_triangle": 12
+          },
+          "distinct_geometries": 18,
+          "rejections": {
+            "STALE_PIVOT": 896,
+            "BOUNDARY_RESIDUAL": 8
+          },
+          "anchors_checked": 280,
+          "anchor_errors": 0,
+          "mean_ms": 29.77,
+          "max_ms": 34.04
+        }
+      ]
+    },
+    {
+      "version": "structure-study-3.2",
+      "pairs": [
+        {
+          "symbol": "BTC_USDT",
+          "timeframe": "15m",
+          "through": 1789174800,
+          "prefixes": 20,
+          "counts": {
+            "elliott_impulse_bull": 12,
+            "elliott_correction_bear": 12,
+            "elliott_impulse_bear": 8,
+            "elliott_correction_bull": 17,
+            "head_shoulders": 9,
+            "inverse_cup_handle": 10,
+            "double_bottom": 14,
+            "double_top": 7,
+            "cup_handle": 1
+          },
+          "distinct_geometries": 32,
+          "rejections": {
+            "STALE_PIVOT": 792,
+            "CUP_HANDLE_DEPTH": 1,
+            "BOUNDARY_RESIDUAL": 9
+          },
+          "anchors_checked": 319,
+          "anchor_errors": 0,
+          "mean_ms": 40.01,
+          "max_ms": 221.89
+        },
+        {
+          "symbol": "BTC_USDT",
+          "timeframe": "1d",
+          "through": 1789084800,
+          "prefixes": 20,
+          "counts": {
+            "elliott_correction_bull": 4,
+            "elliott_impulse_bull": 17,
+            "elliott_correction_bear": 15,
+            "double_top": 5
+          },
+          "distinct_geometries": 10,
+          "rejections": {
+            "STALE_PIVOT": 602,
+            "AMPLITUDE": 12,
+            "BOUNDARY_RESIDUAL": 4
+          },
+          "anchors_checked": 168,
+          "anchor_errors": 0,
+          "mean_ms": 27.05,
+          "max_ms": 30.72
+        },
+        {
+          "symbol": "BTC_USDT",
+          "timeframe": "1h",
+          "through": 1789171200,
+          "prefixes": 20,
+          "counts": {
+            "double_top": 8,
+            "elliott_impulse_bear": 25,
+            "double_bottom": 7,
+            "elliott_correction_bull": 16,
+            "downtrend_channel": 3,
+            "elliott_cycle_bear": 7
+          },
+          "distinct_geometries": 18,
+          "rejections": {
+            "STALE_PIVOT": 981,
+            "BOUNDARY_RESIDUAL": 22
+          },
+          "anchors_checked": 329,
+          "anchor_errors": 0,
+          "mean_ms": 33.18,
+          "max_ms": 47.93
+        },
+        {
+          "symbol": "BTC_USDT",
+          "timeframe": "1m",
+          "through": 1789176420,
+          "prefixes": 20,
+          "counts": {
+            "uptrend_channel": 3,
+            "cup_handle": 1,
+            "double_bottom": 6
+          },
+          "distinct_geometries": 8,
+          "rejections": {
+            "STALE_PIVOT": 835,
+            "BOUNDARY_RESIDUAL": 36,
+            "AMBIGUOUS_PIVOT_ORDER": 20,
+            "AMPLITUDE": 1,
+            "CUP_HANDLE_DEPTH": 1
+          },
+          "anchors_checked": 47,
+          "anchor_errors": 0,
+          "mean_ms": 31.73,
+          "max_ms": 43.84
+        },
+        {
+          "symbol": "BTC_USDT",
+          "timeframe": "30m",
+          "through": 1789173000,
+          "prefixes": 20,
+          "counts": {
+            "elliott_impulse_bear": 2,
+            "elliott_correction_bull": 8,
+            "double_top": 1,
+            "elliott_impulse_bull": 9,
+            "elliott_correction_bear": 9,
+            "inverse_head_shoulders": 9
+          },
+          "distinct_geometries": 6,
+          "rejections": {
+            "STALE_PIVOT": 913,
+            "AMBIGUOUS_PIVOT_ORDER": 3
+          },
+          "anchors_checked": 142,
+          "anchor_errors": 0,
+          "mean_ms": 29.62,
+          "max_ms": 31.27
+        },
+        {
+          "symbol": "BTC_USDT",
+          "timeframe": "4h",
+          "through": 1789156800,
+          "prefixes": 20,
+          "counts": {
+            "double_bottom": 2,
+            "elliott_impulse_bear": 16,
+            "elliott_correction_bull": 20,
+            "double_top": 2,
+            "inverse_cup_handle": 16
+          },
+          "distinct_geometries": 26,
+          "rejections": {
+            "STALE_PIVOT": 964,
+            "BOUNDARY_RESIDUAL": 36,
+            "AMPLITUDE": 1
+          },
+          "anchors_checked": 214,
+          "anchor_errors": 0,
+          "mean_ms": 33.11,
+          "max_ms": 47.43
+        },
+        {
+          "symbol": "BTC_USDT",
+          "timeframe": "5m",
+          "through": 1789176000,
+          "prefixes": 20,
+          "counts": {
+            "double_top": 6,
+            "double_bottom": 2,
+            "inverse_cup_handle": 15,
+            "elliott_correction_bull": 2,
+            "downtrend_channel": 6,
+            "elliott_impulse_bull": 16,
+            "elliott_correction_bear": 15,
+            "rising_wedge": 2,
+            "bull_breakout_retest": 1
+          },
+          "distinct_geometries": 27,
+          "rejections": {
+            "STALE_PIVOT": 931,
+            "BOUNDARY_RESIDUAL": 39
+          },
+          "anchors_checked": 285,
+          "anchor_errors": 0,
+          "mean_ms": 31.82,
+          "max_ms": 36.29
+        },
+        {
+          "symbol": "BTC_USDT",
+          "timeframe": "8h",
+          "through": 1789142400,
+          "prefixes": 20,
+          "counts": {
+            "elliott_correction_bull": 8,
+            "uptrend_channel": 5,
+            "elliott_impulse_bull": 3,
+            "elliott_correction_bear": 3,
+            "elliott_impulse_bear": 4,
+            "symmetrical_triangle": 8
+          },
+          "distinct_geometries": 8,
+          "rejections": {
+            "STALE_PIVOT": 916,
+            "BOUNDARY_RESIDUAL": 27
+          },
+          "anchors_checked": 187,
+          "anchor_errors": 0,
+          "mean_ms": 30.3,
+          "max_ms": 31.83
+        },
+        {
+          "symbol": "ETH_USDT",
+          "timeframe": "15m",
+          "through": 1789174800,
+          "prefixes": 20,
+          "counts": {
+            "elliott_impulse_bull": 12,
+            "elliott_correction_bear": 12,
+            "cup_handle": 9,
+            "elliott_impulse_bear": 1,
+            "elliott_correction_bull": 1,
+            "head_shoulders": 1
+          },
+          "distinct_geometries": 16,
+          "rejections": {
+            "STALE_PIVOT": 557,
+            "BOUNDARY_RESIDUAL": 13,
+            "ANCHOR_ORDER": 1
+          },
+          "anchors_checked": 128,
+          "anchor_errors": 0,
+          "mean_ms": 25.82,
+          "max_ms": 34.65
+        },
+        {
+          "symbol": "ETH_USDT",
+          "timeframe": "1d",
+          "through": 1789084800,
+          "prefixes": 20,
+          "counts": {
+            "cup_handle": 7,
+            "elliott_impulse_bull": 16,
+            "elliott_correction_bear": 21,
+            "double_top": 6
+          },
+          "distinct_geometries": 18,
+          "rejections": {
+            "STALE_PIVOT": 757,
+            "AMPLITUDE": 3,
+            "BOUNDARY_RESIDUAL": 2
+          },
+          "anchors_checked": 199,
+          "anchor_errors": 0,
+          "mean_ms": 27.68,
+          "max_ms": 32.97
+        },
+        {
+          "symbol": "ETH_USDT",
+          "timeframe": "1h",
+          "through": 1789171200,
+          "prefixes": 20,
+          "counts": {
+            "double_top": 8,
+            "elliott_impulse_bull": 16,
+            "elliott_correction_bear": 16,
+            "inverse_head_shoulders": 7,
+            "falling_wedge": 3,
+            "downtrend_channel": 4
+          },
+          "distinct_geometries": 18,
+          "rejections": {
+            "STALE_PIVOT": 1061,
+            "BOUNDARY_RESIDUAL": 25
+          },
+          "anchors_checked": 239,
+          "anchor_errors": 0,
+          "mean_ms": 31.73,
+          "max_ms": 33.98
+        },
+        {
+          "symbol": "ETH_USDT",
+          "timeframe": "1m",
+          "through": 1789176420,
+          "prefixes": 20,
+          "counts": {
+            "elliott_impulse_bear": 11,
+            "inverse_cup_handle": 1,
+            "elliott_correction_bull": 6,
+            "falling_wedge": 1,
+            "downtrend_channel": 1,
+            "double_top": 3,
+            "elliott_cycle_bear": 15,
+            "elliott_impulse_bull": 11,
+            "elliott_correction_bear": 11,
+            "uptrend_channel": 3
+          },
+          "distinct_geometries": 17,
+          "rejections": {
+            "STALE_PIVOT": 885,
+            "CUP_HANDLE_DEPTH": 3,
+            "BOUNDARY_RESIDUAL": 54,
+            "CUP_NOT_ROUNDED": 1
+          },
+          "anchors_checked": 335,
+          "anchor_errors": 0,
+          "mean_ms": 31.06,
+          "max_ms": 32.35
+        },
+        {
+          "symbol": "ETH_USDT",
+          "timeframe": "30m",
+          "through": 1789173000,
+          "prefixes": 20,
+          "counts": {
+            "double_bottom": 1,
+            "triple_bottom": 1,
+            "elliott_impulse_bull": 10,
+            "elliott_correction_bear": 10
+          },
+          "distinct_geometries": 6,
+          "rejections": {
+            "STALE_PIVOT": 757,
+            "AMPLITUDE": 14,
+            "BOUNDARY_RESIDUAL": 4
+          },
+          "anchors_checked": 68,
+          "anchor_errors": 0,
+          "mean_ms": 27.1,
+          "max_ms": 29.37
+        },
+        {
+          "symbol": "ETH_USDT",
+          "timeframe": "4h",
+          "through": 1789156800,
+          "prefixes": 20,
+          "counts": {
+            "double_bottom": 3,
+            "elliott_impulse_bear": 15,
+            "elliott_correction_bull": 24,
+            "double_top": 19,
+            "rising_wedge": 13,
+            "cup_handle": 13,
+            "elliott_impulse_bull": 5,
+            "elliott_correction_bear": 5,
+            "symmetrical_triangle": 16,
+            "triple_top": 9,
+            "downtrend_channel": 4,
+            "uptrend_channel": 4
+          },
+          "distinct_geometries": 46,
+          "rejections": {
+            "STALE_PIVOT": 838,
+            "AMBIGUOUS_PIVOT_ORDER": 40,
+            "BOUNDARY_RESIDUAL": 16,
+            "CUP_HANDLE_DEPTH": 7
+          },
+          "anchors_checked": 683,
+          "anchor_errors": 0,
+          "mean_ms": 31.66,
+          "max_ms": 33.26
+        },
+        {
+          "symbol": "ETH_USDT",
+          "timeframe": "5m",
+          "through": 1789176000,
+          "prefixes": 20,
+          "counts": {
+            "elliott_impulse_bull": 12,
+            "elliott_correction_bear": 12,
+            "double_bottom": 2,
+            "elliott_correction_bull": 4,
+            "falling_wedge": 2,
+            "elliott_impulse_bear": 2,
+            "double_top": 10
+          },
+          "distinct_geometries": 13,
+          "rejections": {
+            "STALE_PIVOT": 1010,
+            "BOUNDARY_RESIDUAL": 62
+          },
+          "anchors_checked": 140,
+          "anchor_errors": 0,
+          "mean_ms": 32.38,
+          "max_ms": 34.18
+        },
+        {
+          "symbol": "ETH_USDT",
+          "timeframe": "8h",
+          "through": 1789142400,
+          "prefixes": 20,
+          "counts": {
+            "double_top": 14,
+            "elliott_impulse_bear": 5,
+            "elliott_correction_bull": 8,
+            "triple_top": 9,
+            "double_bottom": 1,
+            "elliott_impulse_bull": 3,
+            "elliott_correction_bear": 3,
+            "symmetrical_triangle": 12
+          },
+          "distinct_geometries": 18,
+          "rejections": {
+            "STALE_PIVOT": 1096,
+            "BOUNDARY_RESIDUAL": 8
+          },
+          "anchors_checked": 280,
+          "anchor_errors": 0,
+          "mean_ms": 32.89,
+          "max_ms": 35.93
+        }
+      ]
+    }
+  ]
+}

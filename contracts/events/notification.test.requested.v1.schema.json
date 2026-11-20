@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.gatescope.local/events/notification.test.requested.v1.schema.json",
+  "title": "Notification Test Requested V1 Payload",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["channel_id", "requested_by"],
+  "properties": {
+    "channel_id": {"type": "string", "format": "uuid"},
+    "requested_by": {"type": "string", "format": "uuid"}
+  }
+}

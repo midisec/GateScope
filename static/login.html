@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>登录 · GateScope</title>
+  <link rel="stylesheet" href="/static/login.css">
+</head>
+<body>
+  <main class="login-shell">
+    <section class="login-card" aria-labelledby="login-title">
+      <div class="brand-mark" aria-hidden="true">G</div>
+      <p class="eyebrow">GATESCOPE · RESEARCH MODE</p>
+      <h1 id="login-title">登录控制台</h1>
+      <p class="notice">Phase 0 仅开放研究功能，实盘交易已在服务端硬关闭。</p>
+      <form id="login-form">
+        <label for="username">账号</label>
+        <input id="username" name="username" autocomplete="username" maxlength="64" required autofocus>
+        <label for="password">密码</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" maxlength="256" required>
+        <button id="submit" type="submit">安全登录</button>
+        <p id="error" class="error" role="alert" aria-live="polite"></p>
+      </form>
+    </section>
+  </main>
+  <script src="/static/login.js"></script>
+</body>
+</html>
+

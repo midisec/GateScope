@@ -19,11 +19,14 @@ if [ -z "$PYTHON_BIN" ]; then
   exit 1
 fi
 
-echo "使用：$($PYTHON_BIN --version)（支持 Python 3.9+）"
+echo "使用：$($PYTHON_BIN --version)（要求 Python 3.10+）"
 if [ ! -d .venv ]; then
   "$PYTHON_BIN" -m venv .venv
 fi
 source .venv/bin/activate
 python -m pip install --upgrade pip wheel
-python -m pip install --upgrade -r requirements.txt
+python -m pip install --upgrade -e .
+if [ -z "${GATESCOPE_BOOTSTRAP_PASSWORD:-}" ]; then
+  gatescope-admin create-owner --username "${GATESCOPE_BOOTSTRAP_USERNAME:-owner}"
+fi
 python app.py

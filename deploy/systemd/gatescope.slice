@@ -1,0 +1,13 @@
+[Unit]
+Description=GateScope combined application memory budget
+
+[Slice]
+MemoryAccounting=true
+MemoryHigh=2G
+MemoryMax=3G
+MemorySwapMax=512M
+CPUAccounting=true
+CPUWeight=80
+
+[Install]
+WantedBy=multi-user.target

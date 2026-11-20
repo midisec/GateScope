@@ -1,0 +1,18 @@
+# Copy the stanza into project .codex/config.toml only after the MCP service is
+# reachable. Put the issued one-time token in the named environment variable;
+# never paste the token into this file.
+[mcp_servers.gatescope]
+url = "https://gatescope.example.com/mcp"
+bearer_token_env_var = "GATESCOPE_MCP_TOKEN"
+enabled_tools = [
+  "market_search_instruments",
+  "market_get_candles",
+  "indicator_get_snapshot",
+  "market_analysis_snapshot",
+  "coinglass_get_snapshot",
+  "alert_rule_list",
+  "signal_list",
+  "signal_explain",
+  "trade_get_status",
+  "trade_get_timeline",
+]

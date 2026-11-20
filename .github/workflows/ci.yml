@@ -1,7 +1,12 @@
-name: CI
+name: gatescope-ci
+
 on:
   push:
   pull_request:
+
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -9,17 +14,62 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
-      - run: pip install -r requirements.txt
-      - run: python -m py_compile app.py database.py gate_client.py pattern_engine.py scanner.py
-      - run: |
-          python - <<'PY'
-          import math
-          from pattern_engine import scan_patterns
-          rows=[]
-          for i in range(180):
-              c = 100 + math.sin(i / 10) * 5
-              rows.append({'ts': 1700000000+i*900, 'open':c-.1, 'high':c+.3, 'low':c-.3, 'close':c, 'volume':1000})
-          result=scan_patterns(rows, ['double_top','double_bottom'], min_confidence=.3)
-          assert 'events' in result
-          PY
+          python-version: "3.12"
+      - name: Install locked dependencies
+        run: |
+          python -m pip install uv==0.8.22
+          uv sync --frozen --all-extras
+      - name: Static and contract checks
+        run: |
+          uv run ruff check src/gatescope src/gatescope_executor apps tests scripts app.py database.py gate_client.py scanner.py opportunity_scanner.py pattern_engine.py
+          uv run mypy src apps scripts/generate_formal_openapi.py
+          uv run python -m py_compile app.py database.py gate_client.py scanner.py opportunity_scanner.py pattern_engine.py
+          node --check static/app.js
+          node --check static/login.js
+          uv run python scripts/verify_contracts.py
+          uv run python scripts/check_generated_contracts.py
+          uv run python scripts/verify_boundaries.py
+          uv run python scripts/secret_scan.py
+      - name: Tests
+        run: uv run pytest --cov=src/gatescope --cov-report=term-missing
+      - name: Build and inspect API image
+        run: |
+          docker build -t gatescope-api:phase0 .
+          sh scripts/verify_container.sh gatescope-api:phase0
+      - name: Generate image SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: gatescope-api:phase0
+          format: cyclonedx-json
+          output-file: gatescope-api.sbom.cdx.json
+
+  postgres-contract:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: timescale/timescaledb:2.17.2-pg16
+        env:
+          POSTGRES_DB: gatescope_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres-test-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d gatescope_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      TEST_DATABASE_URL: postgresql://postgres:postgres-test-only@127.0.0.1:5432/gatescope_test
+      GATESCOPE_DATABASE_URL: postgresql://postgres:postgres-test-only@127.0.0.1:5432/gatescope_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install locked dependencies
+        run: |
+          python -m pip install uv==0.8.22
+          uv sync --frozen --all-extras
+      - name: PostgreSQL migration and FORCE RLS tests
+        run: uv run pytest tests/integration/test_postgres_rls.py tests/integration/test_paper_trade_ledger.py tests/integration/test_exchange_credential_admission.py tests/integration/test_testnet_execution_admission.py -q

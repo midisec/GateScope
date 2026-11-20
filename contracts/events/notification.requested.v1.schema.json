@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.gatescope.local/events/notification.requested.v1.schema.json",
+  "title": "Research Alert Notification Requested V1 Payload",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "alert_rule_id",
+    "alert_rule_version",
+    "alert_rule_version_id",
+    "event_key",
+    "instrument_id",
+    "matched",
+    "timeframe"
+  ],
+  "properties": {
+    "alert_rule_id": {"type": "string", "format": "uuid"},
+    "alert_rule_version": {"type": "integer", "minimum": 1},
+    "alert_rule_version_id": {"type": "string", "format": "uuid"},
+    "event_key": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "instrument_id": {"type": "string", "format": "uuid"},
+    "timeframe": {"enum": ["1m", "5m", "15m", "30m", "1h", "4h", "8h", "1d"]},
+    "signal_policy": {"const": "structure-alert-1"},
+    "observed_at": {"type": "string", "format": "date-time"},
+    "expires_at": {"type": "string", "format": "date-time"},
+    "direction": {"enum": ["bullish", "bearish", "neutral"]},
+    "matched": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 28,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["confidence", "confirmed", "fact_id", "pattern_id", "payload_hash", "series_id"],
+        "properties": {
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "confirmed": {"type": "boolean"},
+          "fact_id": {"type": "string", "minLength": 1, "maxLength": 200},
+          "pattern_id": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,63}$"},
+          "payload_hash": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+          "series_id": {"type": "string", "minLength": 1, "maxLength": 200},
+          "direction": {"enum": ["bullish", "bearish", "neutral"]},
+          "phase": {"enum": ["FORMED", "CONFIRMED", null]},
+          "observed_at": {"type": "string", "format": "date-time"},
+          "detector_version": {"type": ["string", "null"], "maxLength": 100},
+          "evidence_id": {"type": ["string", "null"], "maxLength": 200},
+          "context_id": {"type": ["string", "null"], "maxLength": 200},
+          "candidate_id": {"type": ["string", "null"], "maxLength": 200},
+          "source_event": {"type": "object"},
+          "trade_notice": {"type": "object"}
+        }
+      }
+    }
+  }
+}

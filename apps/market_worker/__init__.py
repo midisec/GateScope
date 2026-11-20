@@ -1,0 +1,2 @@
+"""Market worker composition root."""
+

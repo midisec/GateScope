@@ -1,0 +1,43 @@
+.coinglass-controls,.coinglass-review{min-width:0;color:var(--text,#e2e8f0)}
+.coinglass-controls{padding:12px 14px;border:1px solid var(--border,#283342);border-radius:10px;background:var(--panel,#121923)}
+.coinglass-controls>header,.coinglass-evidence-grid article>header{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.coinglass-controls>header>div{display:flex;gap:10px;align-items:center;flex-wrap:wrap;min-width:0}
+.coinglass-scope{font-size:12px;color:var(--muted,#93a4b8);overflow-wrap:anywhere}
+.coinglass-status{display:flex;flex-wrap:wrap;gap:6px 14px;margin:9px 0;color:var(--muted,#93a4b8);font-size:12px}
+.coinglass-status strong{color:var(--text,#e2e8f0)}
+.coinglass-metric-toggles{display:flex;gap:8px;flex-wrap:wrap}
+.coinglass-metric-toggles>label{display:flex;align-items:center;gap:8px;border:1px solid var(--border,#283342);border-radius:8px;padding:8px 12px;min-height:44px;cursor:pointer;flex:1 1 135px;font-size:12px}
+.coinglass-metric-toggles>label.selected{border-color:var(--accent,#6d9fff);background:rgba(83,139,235,.10)}
+.coinglass-metric-toggles>label.unavailable{opacity:.65;cursor:not-allowed}
+.coinglass-metric-toggles input{width:16px;height:16px;min-width:16px;margin:0}
+.coinglass-metric-toggles small{display:block;margin-top:3px;color:var(--muted,#93a4b8);font-variant-numeric:tabular-nums}
+.coinglass-mobile-select{display:flex;flex-direction:column;gap:7px;font-size:12px;color:var(--muted,#93a4b8)}
+.coinglass-mobile-select select{min-height:44px;width:100%;max-width:100%}
+.coinglass-method{margin-top:12px;color:var(--muted,#93a4b8);font-size:12px}
+.coinglass-controls summary,.coinglass-review summary{cursor:pointer;min-height:32px;display:list-item;align-content:center}
+.coinglass-review{max-width:900px;margin:auto}
+.coinglass-review h3{font-size:14px;margin:0 0 12px}
+.coinglass-review p{line-height:1.6;overflow-wrap:anywhere}
+.coinglass-review-content>section{margin-bottom:18px}
+.coinglass-original,.coinglass-scenario{padding:16px;border:1px solid var(--border,#283342);border-radius:10px;background:var(--panel,#121923)}
+.coinglass-original dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:0 0 12px}
+.coinglass-original dt{font-size:12px;color:var(--muted,#93a4b8);margin-bottom:5px}
+.coinglass-original dd{font-variant-numeric:tabular-nums;margin:0;overflow-wrap:anywhere}
+.coinglass-original details,.coinglass-evidence details{font-size:12px;color:var(--muted,#93a4b8)}
+.coinglass-warning{color:#edbc72;font-size:12px;background:rgba(221,166,68,.07);padding:8px 10px;border-radius:6px}
+.coinglass-warning p{margin:3px 0}
+.coinglass-evidence-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.coinglass-evidence-grid article{padding:12px;border:1px solid var(--border,#283342);border-radius:8px;min-width:0}
+.coinglass-evidence-grid article>header{align-items:flex-start;flex-wrap:wrap;font-size:13px}
+.coinglass-evidence-grid article>header span{font-variant-numeric:tabular-nums}
+.coinglass-evidence-grid article>small{font-size:11px;color:var(--muted,#93a4b8);display:block;margin-top:8px}
+.coinglass-evidence-grid article>p{font-size:12px}
+.coinglass-scenario-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.coinglass-scenario-fields label{display:flex;flex-direction:column;gap:7px;font-size:12px;color:var(--muted,#93a4b8);min-width:0}
+.coinglass-scenario-fields input{width:100%;min-width:0;box-sizing:border-box;min-height:44px}
+.coinglass-scenario-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px}
+.coinglass-scenario-actions small,.coinglass-scenario-saved small,.coinglass-review-footer span{font-size:12px;color:var(--muted,#93a4b8)}
+.coinglass-scenario-saved{display:flex;flex-direction:column;gap:8px;margin-top:16px;border-top:1px solid var(--border,#283342);padding-top:14px}
+.coinglass-review-footer{position:sticky;bottom:0;background:var(--panel,#121923);display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;margin-top:16px;border-top:1px solid var(--border,#283342)}
+.coinglass-controls button,.coinglass-review button{min-height:44px}
+@media(max-width:640px){.coinglass-controls{padding:10px}.coinglass-controls>header{align-items:flex-start}.coinglass-controls>header>div{display:grid;gap:5px}.coinglass-metric-toggles>label{flex:1 1 125px}.coinglass-evidence-grid,.coinglass-original dl,.coinglass-scenario-fields{grid-template-columns:minmax(0,1fr)}.coinglass-original,.coinglass-scenario{padding:12px}.coinglass-review-footer{align-items:flex-start;flex-direction:column}.coinglass-review-footer button{width:100%}.coinglass-controls summary,.coinglass-review summary{min-height:44px}}

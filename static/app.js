@@ -38,6 +38,8 @@
     opportunitySettings: null,
     opportunityData: null,
     opportunityPollTimer: null,
+    liveRefreshTimer: null,
+    lastMarketRefreshAt: 0,
   };
 
   const dom = {};
@@ -97,10 +99,14 @@
   }
 
   async function api(url, options = {}) {
-    const config = { ...options, headers: { ...(options.headers || {}) } };
+    const config = { credentials: 'same-origin', ...options, headers: { ...(options.headers || {}) } };
     if (config.body && typeof config.body !== 'string') {
       config.headers['Content-Type'] = 'application/json';
       config.body = JSON.stringify(config.body);
+    }
+    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(String(config.method || 'GET').toUpperCase())) {
+      const csrf = document.cookie.split('; ').find(row => row.startsWith('gatescope_csrf='));
+      if (csrf) config.headers['X-CSRF-Token'] = decodeURIComponent(csrf.split('=').slice(1).join('='));
     }
     const response = await fetch(url, config);
     let payload = null;
@@ -109,7 +115,11 @@
       try { payload = JSON.parse(text); } catch (_) { payload = text; }
     }
     if (!response.ok) {
-      const message = payload && payload.detail ? payload.detail : String(payload || `HTTP ${response.status}`);
+      if (response.status === 401) {
+        window.location.replace('/login');
+        throw new Error('登录已失效');
+      }
+      const message = payload && payload.error && payload.error.message ? payload.error.message : payload && payload.detail ? payload.detail : String(payload || `HTTP ${response.status}`);
       throw new Error(message);
     }
     return payload;
@@ -346,7 +356,11 @@
   }
 
   async function refreshWatchlist() {
+    const currentWatchId = state.currentWatch && state.currentWatch.id;
     state.watchlist = await api('/api/watchlist');
+    if (currentWatchId) {
+      state.currentWatch = state.watchlist.find(item => item.id === currentWatchId) || null;
+    }
     dom.watchCount.textContent = state.watchlist.length;
     renderWatchlist();
     populateAlertInstruments();
@@ -365,6 +379,9 @@
         </div>
         <div class="instrument-actions">
           <div class="last-mini">${item.last_price == null ? '--' : fmt(item.last_price)}<br>${item.last_ts ? new Date(item.last_ts * 1000).toLocaleTimeString('zh-CN', { hour12: false }) : ''}</div>
+          <select data-watch-refresh="${item.id}" title="实时刷新频率" aria-label="${escapeHtml(item.symbol)} 刷新频率">
+            ${[5, 10, 15, 30, 60, 300].map(seconds => `<option value="${seconds}" ${Number(item.refresh_seconds) === seconds ? 'selected' : ''}>${seconds < 60 ? `${seconds}秒` : `${seconds / 60}分钟`}</option>`).join('')}
+          </select>
           <button data-remove-watch="${item.id}" title="移除自选">×</button>
         </div>
       </div>`).join('');
@@ -383,6 +400,20 @@
         showToast('已移除自选');
       } catch (error) { showToast(error.message, true); }
     }));
+    dom.watchlist.querySelectorAll('[data-watch-refresh]').forEach(select => {
+      select.addEventListener('click', event => event.stopPropagation());
+      select.addEventListener('change', async event => {
+        event.stopPropagation();
+        try {
+          const updated = await api(`/api/watchlist/${select.dataset.watchRefresh}`, {
+            method: 'PATCH', body: { refresh_seconds: Number(select.value) },
+          });
+          if (state.currentWatch && state.currentWatch.id === updated.id) state.currentWatch = updated;
+          await refreshWatchlist();
+          showToast(`${updated.symbol} 已设为 ${updated.refresh_seconds} 秒更新`);
+        } catch (error) { showToast(error.message, true); }
+      });
+    });
   }
 
   async function selectWatch(item) {
@@ -431,6 +462,7 @@
       const note = payload.truncated ? 'Gate 历史根数受限，已显示可获取部分；本地会继续积累。' : '已同步本地 SQLite';
       dom.dataStatus.textContent = `${note} 共 ${state.bars.length} 根，新增/更新 ${payload.fetched || 0} 根${payload.warning ? `；${payload.warning}` : ''}`;
       if (fit) chart.api.timeScale().fitContent();
+      state.lastMarketRefreshAt = Date.now();
       await scanCurrentPatterns();
       renderWatchlist();
     } catch (error) {
@@ -1153,6 +1185,20 @@
     }
   }
 
+  async function pollLiveMarket() {
+    if (document.hidden || !state.bootstrap) return;
+    try {
+      await refreshWatchlist();
+      if (!state.currentInstrument || state.loading) return;
+      const refreshSeconds = Number((state.currentWatch && state.currentWatch.refresh_seconds) || state.bootstrap.config.default_watch_refresh_seconds || 15);
+      if (Date.now() - state.lastMarketRefreshAt >= Math.max(5, refreshSeconds) * 1000) {
+        await loadCurrentMarket(false);
+      }
+    } catch (_) {
+      // 状态栏会单独报告后端或 worker 是否不可用。
+    }
+  }
+
   function bindEvents() {
     document.querySelectorAll('.top-tab').forEach(tab => tab.addEventListener('click', () => switchView(tab.dataset.view)));
     document.querySelectorAll('.sidebar-tab').forEach(tab => tab.addEventListener('click', () => switchSide(tab.dataset.side)));
@@ -1169,6 +1215,10 @@
       finally { dom.catalogRefresh.disabled = false; }
     });
     dom.refreshCurrent.addEventListener('click', () => loadCurrentMarket(false));
+    dom.logoutButton.addEventListener('click', async () => {
+      dom.logoutButton.disabled = true;
+      try { await api('/auth/logout', { method: 'POST' }); } finally { window.location.replace('/login'); }
+    });
     dom.wakeScanner.addEventListener('click', async () => { showToast('后台扫描器将在下一轮立即更新'); await loadCurrentMarket(false); });
     dom.performanceHorizonButtons.querySelectorAll('[data-horizon]').forEach(button => button.addEventListener('click', () => {
       const horizon = Number(button.dataset.horizon);
@@ -1213,7 +1263,7 @@
 
   function cacheDom() {
     [
-      'toast', 'scanner-dot', 'scanner-text', 'refresh-current', 'unread-badge', 'watch-count', 'instrument-search',
+      'toast', 'scanner-dot', 'scanner-text', 'refresh-current', 'auth-user', 'logout-button', 'unread-badge', 'watch-count', 'instrument-search',
       'catalog-refresh', 'market-filters', 'instrument-results', 'watchlist', 'wake-scanner', 'current-symbol',
       'current-market', 'stock-pill', 'current-name', 'last-price', 'last-time', 'interval-buttons', 'range-buttons',
       'pattern-button', 'selected-pattern-count', 'scan-button', 'reset-chart', 'export-csv', 'ohlc-legend',
@@ -1238,6 +1288,7 @@
     bindEvents();
     try {
       state.bootstrap = await api('/api/bootstrap');
+      dom.authUser.textContent = `${state.bootstrap.user.username} · ${state.bootstrap.user.role}`;
       if (!state.bootstrap.instrument_count) showToast('Gate 市场目录正在后台初始化，请稍后点击刷新');
       state.watchlist = state.bootstrap.watchlist || [];
       state.rules = state.bootstrap.alert_rules || [];
@@ -1257,6 +1308,10 @@
       if (state.watchlist.length) await selectWatch(state.watchlist[0]);
       pollAlertEvents(true);
       state.alertPollTimer = setInterval(() => pollAlertEvents(false), 8000);
+      state.liveRefreshTimer = setInterval(pollLiveMarket, 5000);
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) pollLiveMarket();
+      });
       setInterval(refreshStatus, 10000);
       refreshStatus();
       loadOpportunityResults().catch(() => {});

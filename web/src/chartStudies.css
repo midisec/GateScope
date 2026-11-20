@@ -1,0 +1,68 @@
+.app-dialog:has(.chart-studies-picker) { width: min(800px, calc(100vw - 28px)); }
+.chart-studies-picker { min-width: 0; color: var(--text, #d3dcec); }
+.chart-studies-search { display: flex; align-items: center; gap: 10px; background: #0a111c; border: 1px solid #33445d; border-radius: 8px; padding: 0 12px; }
+.chart-studies-search:focus-within { border-color: #6b9cec; box-shadow: 0 0 0 2px #5186e11c; }
+.chart-studies-search svg { width: 18px; height: 18px; flex: 0 0 18px; fill: none; stroke: #8da9cc; stroke-width: 1.7; }
+.chart-studies-search input { min-width: 0; width: 100%; min-height: 46px; background: transparent; border: 0; box-shadow: none; outline: none; }
+.chart-studies-search button { min-height: 40px; min-width: 40px; padding: 4px; background: transparent; border: 0; }
+.chart-studies-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 14px 0 10px; }
+.chart-studies-toolbar > span { font-size: 12px; color: #95a9c5; white-space: nowrap; }
+.chart-studies-categories { display: flex; flex-wrap: wrap; gap: 5px; }
+.chart-studies-categories button { min-height: 40px; padding: 7px 12px; border: 1px solid transparent; background: transparent; color: #9bb0cc; border-radius: 6px; }
+.chart-studies-categories button[aria-pressed="true"] { background: #24416b; border-color: #426a9f; color: #e1edff; }
+.chart-studies-selection { display: flex; align-items: flex-start; gap: 10px; justify-content: space-between; margin-bottom: 12px; min-width: 0; }
+.chart-studies-chips { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
+.chart-studies-chips button { display: flex; align-items: center; gap: 8px; min-height: 34px; max-width: 100%; overflow-wrap: anywhere; text-align: left; font-size: 11px; border: 1px solid #355684; background: #172b48; color: #bed8ff; border-radius: 6px; padding: 6px 9px; }
+.chart-studies-chips button span { font-size: 16px; }
+.chart-studies-clear { flex-shrink: 0; font-size: 11px; color: #b3c6e1; background: transparent; padding: 7px 9px; min-height: 34px; }
+.chart-studies-empty-selection { color: #879bb7; font-size: 12px; padding: 5px 0; }
+.chart-studies-source { display: flex; justify-content: space-between; align-items: center; gap: 12px; background: #111f31; border-radius: 7px; padding: 9px 11px; margin: 0 0 12px; font-size: 12px; }
+.chart-studies-source > div { display: grid; gap: 4px; min-width: 0; }
+.chart-studies-source small { color: #8ea7c6; overflow-wrap: anywhere; }
+.chart-studies-source button, .chart-studies-source a { min-height: 36px; padding: 8px 10px; flex-shrink: 0; font-size: 11px; }
+.chart-studies-source a { color: #a5c7ff; border-radius: 5px; background: #233b5f; text-decoration: none; }
+.chart-studies-error { border: 1px solid #6d3c46; background: #291c25; color: #f0b8be; border-radius: 6px; font-size: 12px; padding: 9px 11px; margin-bottom: 10px; overflow-wrap: anywhere; }
+.chart-studies-options { display: grid; gap: 7px; }
+.chart-study-option { display: flex; align-items: center; gap: 12px; min-width: 0; min-height: 68px; padding: 10px 12px; border: 1px solid #283952; border-radius: 8px; background: #0e1725; cursor: pointer; transition: border-color .12s ease, background .12s ease; }
+.chart-study-option:hover { border-color: #506e98; background: #14243a; }
+.chart-study-option.selected { border-color: #467bba; background: #152b49; }
+.chart-study-option:focus-within { outline: 2px solid #7aabf1; outline-offset: 1px; }
+.chart-study-option input[type="checkbox"] { width: 18px; height: 18px; min-width: 18px; margin: 0; accent-color: #639eec; }
+.chart-study-copy { display: grid; gap: 5px; flex: 1; min-width: 0; }
+.chart-study-copy strong { font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
+.chart-study-copy small { font-size: 11px; color: #94aac7; line-height: 1.4; overflow-wrap: anywhere; }
+.chart-study-availability { font-size: 10px; border: 1px solid #35475e; border-radius: 4px; padding: 4px 6px; white-space: nowrap; color: #a0b2cc; }
+.chart-study-availability.ready { background: #12332f; border-color: #236457; color: #83d8c2; }
+.chart-study-availability.historical { background: #342915; border-color: #6b542b; color: #e3c184; }
+.chart-study-availability.local { background: #222844; border-color: #4b568b; color: #b2bbee; }
+.chart-studies-no-match { padding: 18px 10px; text-align: center; color: #96abc6; font-size: 13px; }
+.chart-studies-no-match button { display: block; margin: 10px auto 0; min-height: 40px; }
+.chart-studies-vpvr { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin: 16px 0 0; border: 1px solid #344465; border-radius: 8px; padding: 14px; }
+.chart-studies-vpvr legend { font-size: 12px; color: #bbcdea; padding: 0 6px; }
+.chart-studies-vpvr label { display: grid; gap: 7px; min-width: 0; font-size: 11px; color: #9fb3cf; }
+.chart-studies-vpvr label > span { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.chart-studies-vpvr output { color: #d8e6fa; font-variant-numeric: tabular-nums; }
+.chart-studies-vpvr select { width: 100%; min-width: 0; min-height: 40px; }
+.chart-studies-vpvr input[type="range"] { width: 100%; min-width: 0; min-height: 36px; padding: 0; margin: 0; accent-color: #699fe9; box-shadow: none; }
+.chart-studies-method { margin-top: 14px; color: #91a7c5; font-size: 11px; }
+.chart-studies-method summary { cursor: pointer; min-height: 36px; align-content: center; }
+.chart-studies-method p { margin: 8px 0; }
+.chart-studies-footer { position: sticky; bottom: -24px; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 0 12px; margin-top: 12px; border-top: 1px solid #2a3c56; background: #101722; box-shadow: 0 -8px 15px #101722c9; }
+.chart-studies-footer span { font-size: 11px; color: #91a8c8; }
+.chart-studies-footer button { min-height: 44px; min-width: 96px; }
+@media (max-width: 640px) {
+  .app-dialog:has(.chart-studies-picker) .app-dialog-body { padding: 16px; }
+  .chart-studies-toolbar { flex-wrap: wrap; gap: 6px; }
+  .chart-studies-categories button { min-height: 44px; padding: 7px 10px; }
+  .chart-studies-selection { display: block; }
+  .chart-studies-clear { margin-top: 5px; min-height: 40px; }
+  .chart-studies-chips button { min-height: 40px; }
+  .chart-study-option { gap: 9px; padding: 10px; }
+  .chart-study-copy strong { font-size: 12px; }
+  .chart-study-availability { padding: 4px; font-size: 10px; }
+  .chart-studies-source button, .chart-studies-source a { min-height: 40px; }
+  .chart-studies-vpvr { grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 12px; }
+  .chart-studies-vpvr input[type="range"] { min-height: 44px; }
+  .chart-studies-footer { bottom: -16px; }
+}
+@media (prefers-reduced-motion: reduce) { .chart-study-option { transition: none; } }
